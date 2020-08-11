@@ -1,22 +1,25 @@
-import { app, BrowserWindow } from 'electron'
-import * as path from 'path'
-import * as url from 'url'
-import installExtension, { REACT_DEVELOPER_TOOLS, REDUX_DEVTOOLS } from 'electron-devtools-installer'
+import { app, BrowserWindow } from 'electron';
+import * as path from 'path';
+import * as url from 'url';
+import installExtension, { REACT_DEVELOPER_TOOLS, REDUX_DEVTOOLS } from 'electron-devtools-installer';
 
-let mainWindow: Electron.BrowserWindow | null
+let mainWindow: Electron.BrowserWindow | null;
+
+app.setName('win-rt-rgb');
 
 function createWindow() {
   mainWindow = new BrowserWindow({
-    width: 1100,
+    title: 'win-rt-rgb',
+    width: 1200,
     height: 700,
-    backgroundColor: '#191622',
+    backgroundColor: '#222222',
     webPreferences: {
       nodeIntegration: true
     }
-  })
+  });
 
   if (process.env.NODE_ENV === 'development') {
-    mainWindow.loadURL('http://localhost:4000')
+    mainWindow.loadURL('http://localhost:4000');
   } else {
     mainWindow.loadURL(
       url.format({
@@ -24,12 +27,12 @@ function createWindow() {
         protocol: 'file:',
         slashes: true
       })
-    )
+    );
   }
 
   mainWindow.on('closed', () => {
     mainWindow = null
-  })
+  });
 }
 
 app.on('ready', createWindow)
@@ -44,4 +47,4 @@ app.on('ready', createWindow)
         .catch((err) => console.log('An error occurred: ', err));
     }
   })
-app.allowRendererProcessReuse = true
+app.allowRendererProcessReuse = true;
