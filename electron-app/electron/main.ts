@@ -12,7 +12,7 @@ function createWindow() {
     title: 'win-rt-rgb',
     width: 1200,
     height: 700,
-    backgroundColor: '#222222',
+    backgroundColor: '#202020',
     webPreferences: {
       nodeIntegration: true
     }

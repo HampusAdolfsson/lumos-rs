@@ -5,7 +5,7 @@ const rootPath = path.resolve(__dirname, '..')
 
 module.exports = {
   resolve: {
-    extensions: ['.tsx', '.ts', '.js'],
+    extensions: ['.tsx', '.ts', '.js', '.css'],
     mainFields: ['main', 'module', 'browser']
   },
   entry: path.resolve(rootPath, 'src', 'App.tsx'),
@@ -19,7 +19,13 @@ module.exports = {
         use: {
           loader: 'babel-loader'
         }
-      }
+      },
+      {
+        test: /\.css$/,
+        use: [
+          { loader: 'style-loader' },
+          { loader: 'css-loader' }]
+      },
     ]
   },
   devServer: {

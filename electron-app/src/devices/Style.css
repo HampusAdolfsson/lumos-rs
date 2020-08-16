@@ -1,0 +1,46 @@
+#devicesScene {
+    padding: 25px 50px;
+}
+
+#deviceControls button {
+    margin-right: 30px;
+    padding: 2px 6px;
+    font-size: 16px;
+}
+
+#deviceList {
+    padding: 30px 0;
+    max-width: 800px;
+}
+
+.deviceEntryRoot {
+    width: 47%;
+    display: inline-block;
+    padding: 40px;
+    background-color: #3c3c3c !important;
+}
+
+.deviceLeft {
+    margin-right: 6%;
+}
+
+#remove {
+    color: #cc3333;
+    border-color: #cc3333;
+}
+
+#remove:hover {
+    border-color: #cc3333;
+    background-color: #cc333311;
+}
+
+.formField {
+    display: block !important;
+    margin-bottom: 15px;
+    width: 100%;
+}
+
+.MuiInputBase-root {
+    width: 100%;
+    margin-bottom: 30px;
+}
