@@ -8,6 +8,7 @@ import { DevicesScene } from './devices/DevicesScene';
 import { AboutScene } from './AboutScene';
 
 import './styles/Global.css';
+import { ProfilesScene } from './profiles/ProfilesScene';
 
 const mainElement = document.createElement('div');
 mainElement.setAttribute('id', 'root');
@@ -31,11 +32,11 @@ let theme = createMuiTheme({
   }
 });
 
-enum Scene {
-    Devices,
-    Profiles,
-    About,
-}
+const scenes: [JSX.Element, string][] = [
+  [<DevicesScene />, "Devices"],
+  [<ProfilesScene />, "Profiles"],
+  [<AboutScene />, "About"],
+];
 
 interface State {
   visibleScene: number;
@@ -46,7 +47,7 @@ class App extends React.Component<{}, State> {
   constructor(props: {}) {
     super(props);
     this.state = {
-      visibleScene: 0,
+      visibleScene: 1,
     };
   }
 
@@ -57,26 +58,18 @@ class App extends React.Component<{}, State> {
   }
 
   render() {
-    const sceneNames = Object.keys(Scene).filter(key => isNaN(Number(key)));
+    const sceneNames = scenes.map(scene => scene[1]);
     return (
       <>
         <ThemeProvider theme={theme} >
           <CssBaseline />
           <Sidebar scenes={sceneNames} selectedScene={this.state.visibleScene} onSceneChanged={this.setScene.bind(this)} />
           <div className="scene">
-            {this.renderSelectedScene()}
+            {scenes[this.state.visibleScene][0]}
           </div>
         </ThemeProvider>
       </>
     );
-  }
-
-  renderSelectedScene() {
-    if (this.state.visibleScene === 0) {
-      return <DevicesScene />
-    } else if (this.state.visibleScene === 2) {
-      return <AboutScene />
-    }
   }
 }
 
