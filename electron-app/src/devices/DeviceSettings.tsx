@@ -6,16 +6,22 @@ const useStyles = makeStyles((theme: Theme) =>
     root: {
       '& .MuiInputBase-root': {
         width: "100%",
-        marginBottom: 30,
+        marginBottom: theme.spacing(1),
       },
     },
     formField: {
       display: "block",
-      marginBottom: 15,
+      marginBottom: "5px",
       width: "100%",
     },
     deleteButton: {
       color: "#ff5555",
+      margin: "5px 0",
+      float: "right",
+    },
+    rightAligner: {
+      width: "100%",
+      justifyContent: "right",
     },
   }),
 );
@@ -39,9 +45,9 @@ export function DeviceSettings() {
       </Typography>
       <Slider aria-labelledby="blur-slider" className={classes.formField} valueLabelDisplay="auto" marks={true} min={0} max={10} />
       <Divider />
-      <Tooltip title="Delete the device">
-        <Button className={classes.deleteButton} >Delete</Button>
-      </Tooltip>
+        <Tooltip title="Delete the device">
+          <Button className={classes.deleteButton} >Delete</Button>
+        </Tooltip>
     </div >
   );
 }

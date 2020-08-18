@@ -19,7 +19,7 @@ const useStyles = makeStyles((theme: Theme) =>
     deviceEntryRoot: {
       width: "47%",
       display: "inline-block",
-      padding: "40px",
+      padding: "15px 20px 0 20px",
       backgroundColor: "#3c3c3c",
     },
     deviceLeft: {
