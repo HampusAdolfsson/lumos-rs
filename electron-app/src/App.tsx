@@ -47,7 +47,7 @@ class App extends React.Component<{}, State> {
   constructor(props: {}) {
     super(props);
     this.state = {
-      visibleScene: 1,
+      visibleScene: 0,
     };
   }
 
