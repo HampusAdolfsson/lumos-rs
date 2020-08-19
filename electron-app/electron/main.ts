@@ -2,9 +2,11 @@ import { app, BrowserWindow, Tray, Menu } from 'electron';
 import * as path from 'path';
 import * as url from 'url';
 import installExtension, { REACT_DEVELOPER_TOOLS, REDUX_DEVTOOLS } from 'electron-devtools-installer';
+import { ChildProcess, spawn } from 'child_process';
 
 let mainWindow: Electron.BrowserWindow | null;
 let isQuitting = false;
+let backendProcess: ChildProcess | undefined;
 
 app.setName('win-rt-rgb');
 
@@ -43,40 +45,40 @@ function createWindow() {
   mainWindow.on('minimize', (event: Event) => {
     event.preventDefault();
     mainWindow?.hide();
-});
+  });
 }
 
-app.on('ready', createWindow)
-  .whenReady()
-  .then(() => {
-    const tray = new Tray(path.join(__dirname, "../icon.png"));
-    tray.setToolTip("win-rt-rgb -- Realtime RGB suite");
-    const contextMenu = Menu.buildFromTemplate([
-      { label: 'Open', click: () => {
-        if (!mainWindow) {
-          createWindow();
-        }
-        mainWindow?.show();
-      }},
-      { label: 'Exit', click: () => {
-        isQuitting = true;
-        app.quit();
-      }},
-    ]);
-    tray.setContextMenu(contextMenu);
-    tray.on('double-click', () => {
+app.whenReady().then(() => {
+  backendProcess = spawn(path.join(__dirname, 'assets/backend/win-rt-rgb.exe'));
+  createWindow();
+  const tray = new Tray(path.join(__dirname, 'assets/icon.png'));
+  tray.setToolTip('win-rt-rgb -- Realtime RGB suite');
+  const contextMenu = Menu.buildFromTemplate([
+    { label: 'Open', click: () => {
+      if (!mainWindow) {
+        createWindow();
+      }
       mainWindow?.show();
-    });
-
-    if (process.env.NODE_ENV === 'development') {
-      installExtension(REACT_DEVELOPER_TOOLS)
-        .then((name) => console.log(`Added Extension:  ${name}`))
-        .catch((err) => console.log('An error occurred: ', err));
-      installExtension(REDUX_DEVTOOLS)
-        .then((name) => console.log(`Added Extension:  ${name}`))
-        .catch((err) => console.log('An error occurred: ', err));
-    }
+    }},
+    { label: 'Exit', click: () => {
+      isQuitting = true;
+      app.quit();
+    }},
+  ]);
+  tray.setContextMenu(contextMenu);
+  tray.on('double-click', () => {
+    mainWindow?.show();
   });
+
+  if (process.env.NODE_ENV === 'development') {
+    installExtension(REACT_DEVELOPER_TOOLS)
+      .then((name) => console.log(`Added Extension:  ${name}`))
+      .catch((err) => console.log('An error occurred: ', err));
+    installExtension(REDUX_DEVTOOLS)
+      .then((name) => console.log(`Added Extension:  ${name}`))
+      .catch((err) => console.log('An error occurred: ', err));
+  }
+});
 
 app.on('window-all-closed', () => {
   // On OS X it is common for applications and their menu bar
@@ -85,4 +87,7 @@ app.on('window-all-closed', () => {
     app.quit();
   }
 });
+app.on('before-quit', () => {
+  backendProcess?.kill();
+}),
 app.allowRendererProcessReuse = true;

@@ -4,12 +4,13 @@
   "description": "",
   "main": "./dist/main.js",
   "scripts": {
-    "dev": "npm-run-all -p dev:react electron:serve",
+    "dev": "npm-run-all -p dev:react dev:assets electron:serve",
     "dev:electron": "cross-env NODE_ENV=development webpack --config webpack/electron.webpack.js --mode development && npm run start:electron",
     "dev:react": "cross-env NODE_ENV=development webpack-dev-server --config webpack/react.webpack.js --mode development",
+    "dev:assets": "xcopy /s /y /q assets dist\\assets\\",
     "electron:serve": "wait-on http-get://localhost:4000/ && npm run dev:electron",
     "start:electron": "electron .",
-    "build": "npm-run-all build:electron build:react",
+    "build": "npm-run-all build:react build:electron",
     "build:run": "npm-run-all build start:electron",
     "build:electron": "webpack --config webpack/electron.webpack.js",
     "build:react": "webpack --config webpack/react.webpack.js",
@@ -52,6 +53,10 @@
   },
   "build": {
     "appId": "win-rt-rgb",
+    "win": {
+      "asar": false,
+      "asarUnpack": "assets/**"
+    },
     "mac": {
       "category": "public.app-category.video"
     },
@@ -60,7 +65,8 @@
     },
     "files": [
       "package.json",
-      "dist/**"
+      "dist/**",
+      "assets/**"
     ]
   }
 }
