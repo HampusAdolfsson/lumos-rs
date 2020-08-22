@@ -33,8 +33,7 @@ export function DevicesScene() {
   return (
     <div id="devicesScene">
       <div>
-        <Button color="primary" variant="contained" disableElevation className={classes.button}>
-          <AddIcon />
+        <Button color="primary" variant="contained" disableElevation className={classes.button} startIcon={<AddIcon/>} >
           Add
         </Button>
         <Button variant="outlined" disableElevation>Apply</Button>

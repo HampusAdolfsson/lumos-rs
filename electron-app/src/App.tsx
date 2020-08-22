@@ -18,15 +18,15 @@ let theme = createMuiTheme({
   palette: {
     type: 'dark',
     primary: {
+      light: '#ffe54c',
+      main: '#ffb300',
+      dark: '#c68400',
+      contrastText: '#000',
+    },
+    secondary: {
       light: '#df78ef',
       main: '#ab47bc',
       dark: '#790e8b',
-      contrastText: '#fff',
-    },
-    secondary: {
-      light: '#439889',
-      main: '#00695c',
-      dark: '#003d33',
       contrastText: '#fff',
     },
   }
