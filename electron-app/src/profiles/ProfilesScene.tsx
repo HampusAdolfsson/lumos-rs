@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ProfileSettings } from './ProfileSettings';
 import { Button, Divider, makeStyles, createStyles, Theme } from '@material-ui/core';
 import AddIcon from '@material-ui/icons/Add'
-import { IProfile } from '../models/profile';
+import { IProfile } from '../models/Profile';
+import { WebsocketService } from '../WebsocketService';
 
 const useStyles = makeStyles((theme: Theme) =>
   createStyles({
@@ -24,6 +25,13 @@ export function ProfilesScene() {
   const [profiles, setProfiles] = useState([] as Array<IProfile>);
   const [lockIndex, setLockIndex] = useState(undefined as (number | undefined));
   const [activeIndex, setActiveIndex] = useState(undefined as (number | undefined));
+
+  useEffect(() => {
+    const subscription = WebsocketService.Instance.receivedProfiles.subscribe(profs => setProfiles(profs));
+    return () => {
+      subscription.unsubscribe();
+    };
+  });
 
   const profileComponents = profiles.map((prof, i) => {
     return <ProfileSettings key={i} profile={prof} onProfileChanged={prof => console.log(i)} isActive={activeIndex === i} isLocked={lockIndex === i}/>
