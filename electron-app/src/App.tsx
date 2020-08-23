@@ -11,6 +11,7 @@ import './styles/Global.css';
 import { ProfilesScene } from './profiles/ProfilesScene';
 import Alert from '@material-ui/lab/Alert';
 import { WebsocketService } from './WebsocketService';
+import { ProfilesService } from './profiles/ProfilesService';
 
 const mainElement = document.createElement('div');
 mainElement.setAttribute('id', 'root');
@@ -66,6 +67,10 @@ class App extends React.Component<{}, State> {
     this.setState({
       visibleScene: i,
     });
+  }
+
+  componentDidMount() {
+    ProfilesService.LoadAndInstantiate();
   }
 
   render() {

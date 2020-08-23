@@ -34,13 +34,20 @@ export function ProfilesScene() {
   });
 
   const profileComponents = profiles.map((prof, i) => {
-    return <ProfileSettings key={i} profile={prof} isActive={activeIndex === i} isLocked={lockIndex === i}
+    return <ProfileSettings key={prof.regex} profile={prof} isActive={activeIndex === i} isLocked={lockIndex === i}
       onProfileChanged={prof => {
         const newProfs: IProfile[] = JSON.parse(JSON.stringify(profiles));
         newProfs[i] = prof;
         ProfilesService.Instance.setProfiles(newProfs);
         setProfiles(newProfs);
-      }}/>
+      }}
+      onProfileDeleted={() => {
+        const newProfs: IProfile[] = JSON.parse(JSON.stringify(profiles));
+        newProfs.splice(i, 1);
+        ProfilesService.Instance.setProfiles(newProfs);
+        setProfiles(newProfs);
+      }}
+      />
   });
 
   const classes = useStyles();
@@ -50,7 +57,11 @@ export function ProfilesScene() {
       {profiles.length > 0 && <Divider className={classes.divider}/>}
       <div>
         <Button color="primary" variant="contained" disableElevation className={classes.button} startIcon={<AddIcon />}
-          onClick={() => { setProfiles(profiles.concat([JSON.parse(JSON.stringify(defaultProfile))])); ProfilesService.Instance.setProfiles(profiles); }}>
+          onClick={() => {
+              const newProfs = profiles.concat([JSON.parse(JSON.stringify(defaultProfile))]);
+              ProfilesService.Instance.setProfiles(newProfs);
+              setProfiles(newProfs);
+            }}>
           Add
         </Button>
       </div>

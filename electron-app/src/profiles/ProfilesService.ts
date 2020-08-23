@@ -9,14 +9,18 @@ export class ProfilesService {
 
   public static get Instance() {
     if (!this.instance) {
-      if (existsSync(this.saveFile)) {
-        const profiles = JSON.parse(readFileSync(this.saveFile).toString());
-        this.instance = new ProfilesService(profiles);
-      } else {
-        this.instance = new ProfilesService([]);
-      }
+      this.LoadAndInstantiate();
     }
-    return this.instance;
+    return this.instance!;
+  }
+
+  public static LoadAndInstantiate() {
+    if (existsSync(this.saveFile)) {
+      const profiles = JSON.parse(readFileSync(this.saveFile).toString());
+      this.instance = new ProfilesService(profiles);
+    } else {
+      this.instance = new ProfilesService([]);
+    }
   }
 
   private static instance: ProfilesService | undefined;

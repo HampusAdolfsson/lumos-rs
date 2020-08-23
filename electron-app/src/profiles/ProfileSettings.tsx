@@ -41,6 +41,7 @@ const useStyles = makeStyles((theme: Theme) =>
 export interface Props {
   profile: IProfile;
   onProfileChanged: (profile: IProfile) => void;
+  onProfileDeleted: () => void;
 
   isLocked: boolean;
   isActive: boolean;
@@ -71,7 +72,7 @@ export function ProfileSettings(props: Props) {
           expandIcon={<ExpandMoreIcon />}>
           <Typography className={classes.heading}>{stateVals.regex[0].replace(/[^a-zA-Z0-9_\s]/g, "") || "New Profile"}</Typography>
           <div className={classes.secondaryHeading}>
-              <Typography>{ props.profile.area.width}x{props.profile.area.height }</Typography>
+              <Typography>{stateVals.width[0]}x{stateVals.height[0]}</Typography>
               { props.isLocked && <LockIcon /> }
               { (props.isActive && !props.isLocked) && <CheckCircleIcon /> }
             </div>
@@ -93,7 +94,7 @@ export function ProfileSettings(props: Props) {
           <Divider />
         <AccordionActions>
           <Button color="default" size="small">{props.isLocked ? "Unlock" : "Lock"}</Button>
-          <Button color="default" size="small" className={classes.deleteButton}>Delete</Button>
+          <Button color="default" size="small" className={classes.deleteButton} onClick={props.onProfileDeleted}>Delete</Button>
           <Button color="primary" size="small" disabled={!dirty} onClick={() => {
               setDirty(false);
               props.onProfileChanged({
