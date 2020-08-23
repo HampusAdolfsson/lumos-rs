@@ -34,7 +34,14 @@ export function ProfilesScene() {
   });
 
   const profileComponents = profiles.map((prof, i) => {
-    return <ProfileSettings key={i} profile={prof} onProfileChanged={prof => console.log(i)} isActive={activeIndex === i} isLocked={lockIndex === i}/>
+    return <ProfileSettings key={i} profile={prof} isActive={activeIndex === i} isLocked={lockIndex === i}
+      onProfileChanged={prof => {
+        console.log(prof);
+        const newProfs: IProfile[] = JSON.parse(JSON.stringify(profiles));
+        newProfs[i] = prof;
+        WebsocketService.Instance.sendProfiles(newProfs);
+        setProfiles(newProfs);
+      }}/>
   });
 
   const classes = useStyles();

@@ -48,36 +48,66 @@ export interface Props {
 
 export function ProfileSettings(props: Props) {
   const classes = useStyles();
+  const stateVals = {
+    regex: useState(props.profile.regex),
+    x: useState(props.profile.area.x),
+    y: useState(props.profile.area.y),
+    width: useState(props.profile.area.width),
+    height: useState(props.profile.area.height),
+  };
+  const [dirty, setDirty] = useState(false);
+
+  const handleInput = (event: React.ChangeEvent<HTMLTextAreaElement | HTMLInputElement>) => {
+    const target = event.target;
+    const name = target.name;
+    (stateVals as any)[name][1](target.value);
+    setDirty(true);
+  }
+
   return (
     <>
       <Accordion>
         <AccordionSummary
           expandIcon={<ExpandMoreIcon />}>
-          <Typography className={classes.heading}>{props.profile.regex || "New Profile"}</Typography>
+          <Typography className={classes.heading}>{stateVals.regex[0].replace(/[^a-zA-Z0-9_\s]/g, "") || "New Profile"}</Typography>
           <div className={classes.secondaryHeading}>
-              {/* {props.profile.area.width}x{props.profile.area.height} */}
+              <Typography>{ props.profile.area.width}x{props.profile.area.height }</Typography>
               { props.isLocked && <LockIcon /> }
-              { (props.isActive && !props.isLocked) && <LockIcon /> }
+              { (props.isActive && !props.isLocked) && <CheckCircleIcon /> }
             </div>
         </AccordionSummary>
         <AccordionDetails className={classes.profileDetails}>
           <TextField label="Window Title Regex" placeholder="^my\s+regex$" variant="outlined" className={classes.formField}
-            value={props.profile.regex}/>
+            value={stateVals.regex[0]} onChange={handleInput} name="regex"/>
           <div className={classes.rectFields} >
             <TextField label="X" placeholder="0" type="number" className={classes.formField}
-              value={props.profile.area.x}/>
+              value={stateVals.x[0]} onChange={handleInput} name="x"/>
             <TextField label="Width" placeholder="1920" type="number" className={classes.formField}
-              value={props.profile.area.width}/>
+              value={stateVals.width[0]} onChange={handleInput} name="width"/>
             <TextField label="Y" placeholder="0" type="number" className={classes.formField}
-              value={props.profile.area.y}/>
+              value={stateVals.y[0]} onChange={handleInput} name="y"/>
             <TextField label="Height" placeholder="1080" type="number" className={classes.formField}
-              value={props.profile.area.height}/>
+              value={stateVals.height[0]} onChange={handleInput} name="height"/>
           </div>
         </AccordionDetails>
           <Divider />
         <AccordionActions>
           <Button color="default" size="small">{props.isLocked ? "Unlock" : "Lock"}</Button>
           <Button color="default" size="small" className={classes.deleteButton}>Delete</Button>
+          <Button color="primary" size="small" disabled={!dirty} onClick={() => {
+              setDirty(false);
+              props.onProfileChanged({
+                regex: stateVals.regex[0],
+                area: {
+                  x: Number(stateVals.x[0]),
+                  y: Number(stateVals.y[0]),
+                  width: Number(stateVals.width[0]),
+                  height: Number(stateVals.height[0]),
+                },
+              });
+            }}>
+            Save
+          </Button>
         </AccordionActions>
       </Accordion>
     </>
