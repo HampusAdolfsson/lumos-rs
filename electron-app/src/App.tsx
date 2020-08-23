@@ -1,7 +1,7 @@
 import React from 'react';
 import { render } from 'react-dom';
 
-import { CssBaseline, makeStyles, createMuiTheme } from '@material-ui/core';
+import { CssBaseline, createMuiTheme } from '@material-ui/core';
 import { ThemeProvider } from '@material-ui/core';
 import { Sidebar } from './Sidebar';
 import { DevicesScene } from './devices/DevicesScene';
@@ -9,6 +9,8 @@ import { AboutScene } from './AboutScene';
 
 import './styles/Global.css';
 import { ProfilesScene } from './profiles/ProfilesScene';
+import Alert from '@material-ui/lab/Alert';
+import { WebsocketService } from './WebsocketService';
 
 const mainElement = document.createElement('div');
 mainElement.setAttribute('id', 'root');
@@ -40,6 +42,7 @@ const scenes: [JSX.Element, string][] = [
 
 interface State {
   visibleScene: number;
+  showBackendError: boolean;
 }
 
 class App extends React.Component<{}, State> {
@@ -48,7 +51,15 @@ class App extends React.Component<{}, State> {
     super(props);
     this.state = {
       visibleScene: 0,
+      showBackendError: false,
     };
+    WebsocketService.Instance.connected.then(connected => {
+      if (!connected) {
+        this.setState({
+          showBackendError: true,
+        });
+      }
+    });
   }
 
   setScene(i: number) {
@@ -65,6 +76,8 @@ class App extends React.Component<{}, State> {
           <CssBaseline />
           <Sidebar scenes={sceneNames} selectedScene={this.state.visibleScene} onSceneChanged={this.setScene.bind(this)} />
           <div className="scene">
+          { this.state.showBackendError &&
+            <Alert severity="error" variant="filled" style={{marginBottom: 30}}>Unable to connect to backend. Try restarting the program.</Alert> }
             {scenes[this.state.visibleScene][0]}
           </div>
         </ThemeProvider>
