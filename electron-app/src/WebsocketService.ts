@@ -1,6 +1,4 @@
-import { IOutputSpecification } from './models/DeviceSpecification';
-import { IProfile } from './models/profile';
-import { BehaviorSubject } from 'rxjs';
+import { Subject } from 'rxjs';
 import 'core-js/stable';
 import 'regenerator-runtime/runtime';
 
@@ -19,7 +17,7 @@ export class WebsocketService {
   private readonly socket: Promise<WebSocket>;
 
   readonly connected: Promise<boolean>;
-  readonly receivedProfiles = new BehaviorSubject<IProfile[]>([]);
+  readonly receivedMessage = new Subject<{ subject: string, contents: any}>();
 
 
   constructor() {
@@ -38,10 +36,10 @@ export class WebsocketService {
     this.connected = this.socket.then(() => true).catch(() => false);
   }
 
-  async sendProfiles(profiles: IProfile[]): Promise<void> {
+  async sendMessage(subject: string, contents: any): Promise<void> {
     const message = {
-      subject: 'profiles',
-      contents: profiles,
+      subject,
+      contents,
     };
     (await this.socket).send(JSON.stringify(message));
   }
@@ -49,12 +47,7 @@ export class WebsocketService {
   private handleMessage(event: MessageEvent): void {
     const data = JSON.parse(event.data);
     const subject = data['subject'];
-    switch (subject) {
-      case 'profiles':
-        this.receivedProfiles.next(data['contents']);
-        break;
-      default:
-        console.error('Received unkown message subject: ' + subject);
-    }
+    const contents = data['contents'];
+    this.receivedMessage.next({ subject, contents });
   }
 }

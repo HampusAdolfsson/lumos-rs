@@ -3,7 +3,7 @@ import { ProfileSettings } from './ProfileSettings';
 import { Button, Divider, makeStyles, createStyles, Theme } from '@material-ui/core';
 import AddIcon from '@material-ui/icons/Add'
 import { IProfile } from '../models/Profile';
-import { WebsocketService } from '../WebsocketService';
+import { ProfilesService } from './ProfilesService';
 
 const useStyles = makeStyles((theme: Theme) =>
   createStyles({
@@ -27,7 +27,7 @@ export function ProfilesScene() {
   const [activeIndex, setActiveIndex] = useState(undefined as (number | undefined));
 
   useEffect(() => {
-    const subscription = WebsocketService.Instance.receivedProfiles.subscribe(profs => setProfiles(profs));
+    const subscription = ProfilesService.Instance.profiles.subscribe(profs => setProfiles(profs));
     return () => {
       subscription.unsubscribe();
     };
@@ -36,10 +36,9 @@ export function ProfilesScene() {
   const profileComponents = profiles.map((prof, i) => {
     return <ProfileSettings key={i} profile={prof} isActive={activeIndex === i} isLocked={lockIndex === i}
       onProfileChanged={prof => {
-        console.log(prof);
         const newProfs: IProfile[] = JSON.parse(JSON.stringify(profiles));
         newProfs[i] = prof;
-        WebsocketService.Instance.sendProfiles(newProfs);
+        ProfilesService.Instance.setProfiles(newProfs);
         setProfiles(newProfs);
       }}/>
   });
@@ -51,10 +50,9 @@ export function ProfilesScene() {
       {profiles.length > 0 && <Divider className={classes.divider}/>}
       <div>
         <Button color="primary" variant="contained" disableElevation className={classes.button} startIcon={<AddIcon />}
-          onClick={() => { setProfiles(profiles.concat([JSON.parse(JSON.stringify(defaultProfile))])); }}>
+          onClick={() => { setProfiles(profiles.concat([JSON.parse(JSON.stringify(defaultProfile))])); ProfilesService.Instance.setProfiles(profiles); }}>
           Add
         </Button>
-        <Button variant="outlined" disableElevation className={classes.button}>Apply</Button>
       </div>
     </div>
   );

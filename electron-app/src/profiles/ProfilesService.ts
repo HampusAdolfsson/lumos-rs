@@ -1,0 +1,38 @@
+import { IProfile } from '../models/Profile';
+import { WebsocketService } from '../WebsocketService';
+import { BehaviorSubject } from 'rxjs';
+import Path from 'path';
+import { readFileSync, existsSync, mkdirSync, writeFileSync } from 'fs';
+
+export class ProfilesService {
+  private static readonly saveFile = Path.join(process.env.APPDATA || ".", "win-rt-rgb", "profiles.json");
+
+  public static get Instance() {
+    if (!this.instance) {
+      if (existsSync(this.saveFile)) {
+        const profiles = JSON.parse(readFileSync(this.saveFile).toString());
+        this.instance = new ProfilesService(profiles);
+      } else {
+        this.instance = new ProfilesService([]);
+      }
+    }
+    return this.instance;
+  }
+
+  private static instance: ProfilesService | undefined;
+
+  public readonly profiles: BehaviorSubject<IProfile[]>;
+
+  private constructor(initialProfiles: IProfile[]) {
+    this.profiles = new BehaviorSubject(initialProfiles);
+  }
+
+  public setProfiles(profiles: IProfile[]) {
+    this.profiles.next(profiles);
+    WebsocketService.Instance.sendMessage('profiles', profiles);
+    if (!existsSync(Path.dirname(ProfilesService.saveFile))) {
+      mkdirSync(Path.dirname(ProfilesService.saveFile), { recursive: true });
+    }
+    writeFileSync(ProfilesService.saveFile, JSON.stringify(profiles));
+  }
+}
