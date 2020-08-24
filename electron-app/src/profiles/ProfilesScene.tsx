@@ -47,6 +47,11 @@ export function ProfilesScene() {
         ProfilesService.Instance.setProfiles(newProfs);
         setProfiles(newProfs);
       }}
+      onProfileLocked={() => {
+        const index = lockIndex === i ? undefined : i;
+        ProfilesService.Instance.setLocked(index);
+        setLockIndex(index);
+      }}
       />
   });
 

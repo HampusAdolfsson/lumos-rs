@@ -17,14 +17,14 @@ const useStyles = makeStyles((theme: Theme) =>
       color: theme.palette.text.secondary,
     },
     profileDetails: {
-      flexDirection: "column",
+      flexDirection: 'column',
     },
     divider: {
       marginLeft: 10,
       marginRight: 10,
     },
     deleteButton: {
-      color: "#ff5555",
+      color: '#ff5555',
     },
     formField: {
       marginLeft: 5,
@@ -32,9 +32,16 @@ const useStyles = makeStyles((theme: Theme) =>
     },
     rectFields: {
       marginTop: 10,
-      display: "flex",
-      flexDirection: "row",
+      display: 'flex',
+      flexDirection: 'row',
     },
+    icon: {
+      height: 16,
+      color: '#6f6',
+    },
+    active: {
+      background: '#525252'
+    }
   }),
 );
 
@@ -42,6 +49,7 @@ export interface Props {
   profile: IProfile;
   onProfileChanged: (profile: IProfile) => void;
   onProfileDeleted: () => void;
+  onProfileLocked: () => void;
 
   isLocked: boolean;
   isActive: boolean;
@@ -67,14 +75,18 @@ export function ProfileSettings(props: Props) {
 
   return (
     <>
-      <Accordion>
+      <Accordion className={(props.isActive ? classes.active : "")}>
         <AccordionSummary
           expandIcon={<ExpandMoreIcon />}>
-          <Typography className={classes.heading}>{stateVals.regex[0].replace(/[^a-zA-Z0-9_\s]/g, "") || "New Profile"}</Typography>
+          <Typography className={classes.heading }>
+            {stateVals.regex[0].replace(/[^a-zA-Z0-9_\s]/g, "") || "New Profile"}
+                { props.isLocked && <LockIcon className={classes.icon} /> }
+                { (props.isActive && !props.isLocked) && <CheckCircleIcon className={classes.icon} /> }
+          </Typography>
           <div className={classes.secondaryHeading}>
-              <Typography>{stateVals.width[0]}x{stateVals.height[0]}</Typography>
-              { props.isLocked && <LockIcon /> }
-              { (props.isActive && !props.isLocked) && <CheckCircleIcon /> }
+              <Typography>
+                {stateVals.width[0]}x{stateVals.height[0]}
+              </Typography>
             </div>
         </AccordionSummary>
         <AccordionDetails className={classes.profileDetails}>
@@ -93,7 +105,7 @@ export function ProfileSettings(props: Props) {
         </AccordionDetails>
           <Divider />
         <AccordionActions>
-          <Button color="default" size="small">{props.isLocked ? "Unlock" : "Lock"}</Button>
+          <Button color="default" size="small" onClick={props.onProfileLocked}>{props.isLocked ? "Unlock" : "Lock"}</Button>
           <Button color="default" size="small" className={classes.deleteButton} onClick={props.onProfileDeleted}>Delete</Button>
           <Button color="primary" size="small" disabled={!dirty} onClick={() => {
               setDirty(false);

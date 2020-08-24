@@ -29,6 +29,7 @@ export class ProfilesService {
 
   private constructor(initialProfiles: IProfile[]) {
     this.profiles = new BehaviorSubject(initialProfiles);
+    WebsocketService.Instance.sendMessage('profiles', initialProfiles);
   }
 
   public setProfiles(profiles: IProfile[]) {
@@ -38,5 +39,12 @@ export class ProfilesService {
       mkdirSync(Path.dirname(ProfilesService.saveFile), { recursive: true });
     }
     writeFileSync(ProfilesService.saveFile, JSON.stringify(profiles));
+  }
+
+  public setLocked(index: number | undefined) {
+    if (index === undefined || index < 0) {
+      index = -1;
+    }
+    WebsocketService.Instance.sendMessage('lock', index);
   }
 }
