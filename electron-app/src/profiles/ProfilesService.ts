@@ -41,10 +41,14 @@ export class ProfilesService {
     writeFileSync(ProfilesService.saveFile, JSON.stringify(profiles));
   }
 
-  public setLocked(index: number | undefined) {
-    if (index === undefined || index < 0) {
-      index = -1;
+  public setLocked(profileIndex: number, monitorIndex: number) {
+    if (profileIndex < 0 || monitorIndex < 0) {
+      return;
     }
-    WebsocketService.Instance.sendMessage('lock', index);
+    WebsocketService.Instance.sendMessage('lock', { profile: profileIndex, monitor: monitorIndex });
+  }
+
+  public setUnlocked() {
+    WebsocketService.Instance.sendMessage('lock', {});
   }
 }

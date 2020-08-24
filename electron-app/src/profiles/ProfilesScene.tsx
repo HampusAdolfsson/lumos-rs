@@ -4,6 +4,7 @@ import { Button, Divider, makeStyles, createStyles, Theme } from '@material-ui/c
 import AddIcon from '@material-ui/icons/Add'
 import { IProfile } from '../models/Profile';
 import { ProfilesService } from './ProfilesService';
+import { MonitorDialog } from './MonitorDialog';
 
 const useStyles = makeStyles((theme: Theme) =>
   createStyles({
@@ -25,6 +26,7 @@ export function ProfilesScene() {
   const [profiles, setProfiles] = useState([] as Array<IProfile>);
   const [lockIndex, setLockIndex] = useState(undefined as (number | undefined));
   const [activeIndex, setActiveIndex] = useState(undefined as (number | undefined));
+  const [lockCandidateIndex, setlockCandidateIndex] = useState(undefined as (number | undefined));
 
   useEffect(() => {
     const subscription = ProfilesService.Instance.profiles.subscribe(profs => setProfiles(profs));
@@ -48,9 +50,12 @@ export function ProfilesScene() {
         setProfiles(newProfs);
       }}
       onProfileLocked={() => {
-        const index = lockIndex === i ? undefined : i;
-        ProfilesService.Instance.setLocked(index);
-        setLockIndex(index);
+        if (i === lockIndex) {
+          ProfilesService.Instance.setLocked(undefined);
+          setLockIndex(undefined);
+        } else {
+          setlockCandidateIndex(i);
+        }
       }}
       />
   });
@@ -70,6 +75,12 @@ export function ProfilesScene() {
           Add
         </Button>
       </div>
+      <MonitorDialog open={lockCandidateIndex !== undefined} onCancel={() => setlockCandidateIndex(undefined)}
+        onSuccess={idx => {
+          ProfilesService.Instance.setLocked(lockCandidateIndex!, idx);
+          setLockIndex(lockCandidateIndex);
+          setlockCandidateIndex(undefined);
+        }}/>
     </div>
   );
 }
