@@ -29,9 +29,11 @@ export function ProfilesScene() {
   const [lockCandidateIndex, setlockCandidateIndex] = useState(undefined as (number | undefined));
 
   useEffect(() => {
-    const subscription = ProfilesService.Instance.profiles.subscribe(profs => setProfiles(profs));
+    const subscription1 = ProfilesService.Instance.profiles.subscribe(profs => setProfiles(profs));
+    const subscription2 = ProfilesService.Instance.activeProfile.subscribe(index => setActiveIndex(index));
     return () => {
-      subscription.unsubscribe();
+      subscription1.unsubscribe();
+      subscription2.unsubscribe();
     };
   });
 
@@ -51,7 +53,7 @@ export function ProfilesScene() {
       }}
       onProfileLocked={() => {
         if (i === lockIndex) {
-          ProfilesService.Instance.setLocked(undefined);
+          ProfilesService.Instance.setUnlocked();
           setLockIndex(undefined);
         } else {
           setlockCandidateIndex(i);

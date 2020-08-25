@@ -26,10 +26,17 @@ export class ProfilesService {
   private static instance: ProfilesService | undefined;
 
   public readonly profiles: BehaviorSubject<IProfile[]>;
+  public readonly activeProfile = new BehaviorSubject<number | undefined>(undefined);
 
   private constructor(initialProfiles: IProfile[]) {
     this.profiles = new BehaviorSubject(initialProfiles);
+
     WebsocketService.Instance.sendMessage('profiles', initialProfiles);
+    WebsocketService.Instance.receivedMessage.subscribe(message => {
+      if (message.subject === 'activeProfile') {
+        this.activeProfile.next(message.contents);
+      }
+    });
   }
 
   public setProfiles(profiles: IProfile[]) {
