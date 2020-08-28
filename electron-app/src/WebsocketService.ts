@@ -23,7 +23,7 @@ export class WebsocketService {
   constructor() {
     this.socket = new Promise((resolve, reject) => {
       try {
-        const websocket = new WebSocket(`ws://${window.location.hostname}:${WebsocketService.PORT}`);
+        const websocket = new WebSocket(`ws://localhost:${WebsocketService.PORT}`);
         websocket.addEventListener('open', () => resolve(websocket) );
         websocket.addEventListener('error', (ev: Event) => reject());
       } catch (e) {
