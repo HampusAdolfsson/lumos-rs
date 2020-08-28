@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Tray, Menu } from 'electron';
+import { app, BrowserWindow, Tray, Menu, ipcMain } from 'electron';
 import * as path from 'path';
 import * as url from 'url';
 import installExtension, { REACT_DEVELOPER_TOOLS, REDUX_DEVTOOLS } from 'electron-devtools-installer';
@@ -6,7 +6,9 @@ import { ChildProcess, spawn } from 'child_process';
 
 let mainWindow: Electron.BrowserWindow | null;
 let isQuitting = false;
+
 let backendProcess: ChildProcess | undefined;
+let backendProcessOutput: string = "";
 
 app.setName('win-rt-rgb');
 
@@ -50,6 +52,18 @@ function createWindow() {
 
 app.whenReady().then(() => {
   backendProcess = spawn(path.join(__dirname, 'assets/backend/win-rt-rgb.exe'));
+  backendProcess.on('exit', code => {
+    backendProcessOutput += `Backend process exited with code ${code}.`;
+    mainWindow?.webContents.send('log', `Backend process exited with code ${code}.`)
+  });
+  backendProcess.stdout?.on('data', data => {
+    backendProcessOutput += data.toString();
+    mainWindow?.webContents.send('log', data.toString());
+  });
+  ipcMain.on('logsRequest', (event) => {
+    event.reply('logsReply', backendProcessOutput);
+  });
+
   createWindow();
   const tray = new Tray(path.join(__dirname, 'assets/icon.png'));
   tray.setToolTip('win-rt-rgb -- Realtime RGB suite');
