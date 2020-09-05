@@ -1,4 +1,4 @@
-import { IProfile } from '../models/Profile';
+import { IProfile } from './Profile';
 import { WebsocketService } from '../WebsocketService';
 import { BehaviorSubject } from 'rxjs';
 import Path from 'path';

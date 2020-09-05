@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ProfileSettings } from './ProfileSettings';
 import { Button, Divider, makeStyles, createStyles, Theme } from '@material-ui/core';
 import AddIcon from '@material-ui/icons/Add'
-import { IProfile } from '../models/Profile';
+import { IProfile } from './Profile';
 import { ProfilesService } from './ProfilesService';
 import { MonitorDialog } from './MonitorDialog';
 

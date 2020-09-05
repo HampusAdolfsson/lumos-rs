@@ -3,7 +3,7 @@ import { AccordionSummary, AccordionDetails, Typography, Accordion, TextField, B
 import ExpandMoreIcon from '@material-ui/icons/ExpandMore';
 import LockIcon from '@material-ui/icons/Lock';
 import CheckCircleIcon from '@material-ui/icons/CheckCircle';
-import { IProfile } from '../models/Profile';
+import { IProfile } from './Profile';
 
 const useStyles = makeStyles((theme: Theme) =>
   createStyles({
