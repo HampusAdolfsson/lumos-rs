@@ -1,6 +1,6 @@
 'use strict';
 
-export interface IOutputSpecification {
+export interface IDeviceSpecification {
     ipAddress: string;
     numberOfLeds: number;
     saturationAdjustment: number;
