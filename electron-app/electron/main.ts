@@ -20,7 +20,8 @@ function createWindow() {
     backgroundColor: '#202020',
     webPreferences: {
       nodeIntegration: true
-    }
+    },
+    icon: path.join(__dirname, 'assets/icon.png'),
   });
 
   if (process.env.NODE_ENV === 'development') {
