@@ -3,6 +3,7 @@ import { AccordionSummary, AccordionDetails, Typography, Accordion, TextField, B
 import ExpandMoreIcon from '@material-ui/icons/ExpandMore';
 import LockIcon from '@material-ui/icons/Lock';
 import CheckCircleIcon from '@material-ui/icons/CheckCircle';
+import ReactRegionSelect from 'react-region-select';
 import { IProfile } from './Profile';
 
 const useStyles = makeStyles((theme: Theme) =>
@@ -31,16 +32,44 @@ const useStyles = makeStyles((theme: Theme) =>
       marginRight: 5,
     },
     rectFields: {
-      marginTop: 10,
-      display: 'flex',
-      flexDirection: 'row',
+      marginLeft: 10,
+      width: '100%',
+      '& div': {
+        width: 80,
+        marginBottom: 5,
+      }
     },
     icon: {
       height: 16,
       color: '#6f6',
     },
+    dragIcon: {
+      height: 16,
+      color: '#aaa',
+    },
     active: {
       background: '#525252'
+    },
+    areaSelectRoot: {
+      display: 'flex',
+      marginTop: 20,
+      marginLeft: 10,
+      marginRight: 10,
+    },
+    areaSelector: {
+      background: '#333',
+      width: `${1920 / 4}px`,
+      height: `${1080 / 4}px`,
+      marginLeft: 'auto',
+      marginRight: 'auto',
+    },
+    tooltip: {
+      position: 'absolute',
+      right: 0, bottom: 0,
+      background: '#66666666',
+      fontSize: '10px',
+      padding: '4px',
+      color: '#ffe54c'
     }
   }),
 );
@@ -66,12 +95,54 @@ export function ProfileSettings(props: Props) {
   };
   const [dirty, setDirty] = useState(false);
 
+
   const handleInput = (event: React.ChangeEvent<HTMLTextAreaElement | HTMLInputElement>) => {
     const target = event.target;
     const name = target.name;
     (stateVals as any)[name][1](target.value);
     setDirty(true);
   }
+
+  const relToScreenCoords = (reg: any) => {
+    return {
+      x: Math.round(reg.x / 100.0 * 1920.0),
+      y: Math.round(reg.y / 100.0 * 1080.0),
+      width: Math.round(reg.width / 100.0 * 1920.0),
+      height: Math.round(reg.height / 100.0 * 1080.0),
+    };
+  };
+
+  const screenToRelCoords = (reg: any) => {
+    return {
+      x: reg.x * 100.0 / 1920.0,
+      y: reg.y * 100.0 / 1080.0,
+      width: reg.width * 100.0 / 1920.0,
+      height: reg.height * 100.0 / 1080.0,
+    };
+  };
+
+  const [region, setRegion] = useState(Object.assign(screenToRelCoords(props.profile.area), { data: {} }));
+
+  const onRegionChange = (reg: any) => {
+    setRegion(reg);
+    const sc = relToScreenCoords(reg);
+    if (sc.x != stateVals.x[0]) { stateVals.x[1](sc.x); }
+    if (sc.width != stateVals.width[0]) { stateVals.width[1](sc.width); }
+    if (sc.y != stateVals.y[0]) { stateVals.y[1](sc.y); }
+    if (sc.height != stateVals.height[0]) { stateVals.height[1](sc.height); }
+    setDirty(true);
+  }
+
+
+  const regionRenderer = (regionProps: any) => {
+    const sc = relToScreenCoords(region);
+    return (
+      <div className={classes.tooltip}>
+        {`x:${sc.x} w:${sc.width} y:${sc.y} h:${sc.height}`}
+      </div>
+    );
+	};
+
 
   return (
     <>
@@ -92,16 +163,26 @@ export function ProfileSettings(props: Props) {
         <AccordionDetails className={classes.profileDetails}>
           <TextField label="Window Title Regex" placeholder="^my\s+regex$" variant="outlined" className={classes.formField}
             value={stateVals.regex[0]} onChange={handleInput} name="regex"/>
-          <div className={classes.rectFields} >
-            <TextField label="X" placeholder="0" type="number" className={classes.formField}
-              value={stateVals.x[0]} onChange={handleInput} name="x"/>
-            <TextField label="Width" placeholder="1920" type="number" className={classes.formField}
-              value={stateVals.width[0]} onChange={handleInput} name="width"/>
-            <TextField label="Y" placeholder="0" type="number" className={classes.formField}
-              value={stateVals.y[0]} onChange={handleInput} name="y"/>
-            <TextField label="Height" placeholder="1080" type="number" className={classes.formField}
-              value={stateVals.height[0]} onChange={handleInput} name="height"/>
-          </div>
+            <div className={classes.areaSelectRoot}>
+              <ReactRegionSelect maxRegions={1}
+                                  regions={region ? [region] : []}
+                                  onChange={(regions: any) => onRegionChange(regions[0])}
+                                  regionRenderer={regionRenderer}
+                                  constraint className={classes.areaSelector}>
+                <div className={classes.areaSelector} />
+              </ReactRegionSelect>
+
+              <div className={classes.rectFields}>
+                <TextField label="X" placeholder="0" type="number" className={classes.formField}
+                  value={stateVals.x[0]} onChange={handleInput} name="x"/>
+                <TextField label="Width" placeholder="1920" type="number" className={classes.formField}
+                  value={stateVals.width[0]} onChange={handleInput} name="width"/>
+                <TextField label="Y" placeholder="0" type="number" className={classes.formField}
+                  value={stateVals.y[0]} onChange={handleInput} name="y"/>
+                <TextField label="Height" placeholder="1080" type="number" className={classes.formField}
+                  value={stateVals.height[0]} onChange={handleInput} name="height"/>
+              </div>
+            </div>
         </AccordionDetails>
           <Divider />
         <AccordionActions>
