@@ -1,9 +1,17 @@
 'use strict';
+import { WledData } from './WledSettings';
+import { QmkData } from './QmkSettings';
 
 export interface IDeviceSpecification {
-    ipAddress: string;
+    name: string;
     numberOfLeds: number;
+    gamma: number;
+    colorTemp: number;
     saturationAdjustment: number;
-    blurRadius: number;
-    flipHorizontally: boolean;
+    valueAdjustment: number;
+    useAudio: boolean;
+    preferredMonitor: number;
+    type: number | null;
+    wledData: WledData | null;
+    qmkData: QmkData | null
 }

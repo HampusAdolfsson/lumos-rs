@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Paper, Button, SvgIcon, makeStyles, Theme, createStyles, Grid } from '@material-ui/core';
+import { Paper, Button, SvgIcon, makeStyles, Theme, createStyles, Grid, Collapse } from '@material-ui/core';
 import { DeviceSettings } from './DeviceSettings';
 import AddIcon from '@material-ui/icons/Add';
 import { IDeviceSpecification } from './DeviceSpecification';
@@ -21,11 +21,8 @@ const useStyles = makeStyles((theme: Theme) =>
     deviceEntryRoot: {
       width: "100%",
       display: "inline-block",
-      padding: "20px 20px 0 20px",
       backgroundColor: "#3c3c3c",
-    },
-    deviceLeft: {
-      marginRight: "6%",
+      marginBottom: "15px",
     },
   }),
 );
@@ -43,8 +40,7 @@ export function DevicesScene() {
   const classes = useStyles();
 
   const deviceComponents = devices.map((dev, i) => {
-    return <Grid item xs={6} key={dev.ipAddress} >
-      <Paper elevation={1} className={classes.deviceEntryRoot}>
+    return <div className={classes.deviceEntryRoot}>
         <DeviceSettings device={dev}
           onDeviceDeleted={() => {
             const newDevs: IDeviceSpecification[] = JSON.parse(JSON.stringify(devices));
@@ -52,6 +48,7 @@ export function DevicesScene() {
             DevicesService.Instance.setDevices(newDevs);
             setDevices(newDevs);
           }}
+          onDeviceEnabledChanged={() => {}}
           onDeviceChanged={dev => {
             const newDevs: IDeviceSpecification[] = JSON.parse(JSON.stringify(devices));
             newDevs[i] = dev;
@@ -59,8 +56,7 @@ export function DevicesScene() {
             setDevices(newDevs);
           }}
           />
-      </Paper>
-    </Grid>
+      </div>
   });
   return (
     <div id="devicesScene">
@@ -74,17 +70,21 @@ export function DevicesScene() {
           Add
         </Button>
       </div>
-      <Grid container spacing={5} className={classes.content}>
+      <div className={classes.content}>
         {deviceComponents}
-      </Grid>
+      </div>
     </div>
   )
 }
 
 const defaultDevice: IDeviceSpecification = {
-  ipAddress: '',
+  name: '',
   numberOfLeds: 0,
-  blurRadius: 0,
+  gamma: 2,
+  colorTemp: 5500,
   saturationAdjustment: 0,
-  flipHorizontally: false,
+  valueAdjustment: 0,
+  type: null,
+  wledData: null,
+  qmkData: null,
 };

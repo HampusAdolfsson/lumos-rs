@@ -15,8 +15,8 @@ app.setName('win-rt-rgb');
 function createWindow() {
   mainWindow = new BrowserWindow({
     title: 'win-rt-rgb',
-    width: 1200,
-    height: 700,
+    width: 820,
+    height: 1000,
     backgroundColor: '#202020',
     webPreferences: {
       nodeIntegration: true
@@ -36,28 +36,15 @@ function createWindow() {
     );
   }
 
-  mainWindow.on('closed', () => {
-    mainWindow = null;
-  });
-  mainWindow.on('close', (event: Event) => {
-    if (!isQuitting) {
-      event.preventDefault();
-      mainWindow?.hide();
-    }
-  });
-  mainWindow.on('minimize', (event: Event) => {
-    event.preventDefault();
-    mainWindow?.hide();
-  });
 }
 
 app.whenReady().then(() => {
   backendProcess = spawn(path.join(__dirname, 'assets/backend/win-rt-rgb.exe'));
-  backendProcess.on('exit', code => {
+  backendProcess?.on('exit', code => {
     backendProcessOutput += `Backend process exited with code ${code}.`;
     mainWindow?.webContents.send('log', `Backend process exited with code ${code}.`)
   });
-  backendProcess.stdout?.on('data', data => {
+  backendProcess?.stdout?.on('data', data => {
     backendProcessOutput += data.toString();
     mainWindow?.webContents.send('log', data.toString());
   });
@@ -66,24 +53,6 @@ app.whenReady().then(() => {
   });
 
   createWindow();
-  const tray = new Tray(path.join(__dirname, 'assets/icon.png'));
-  tray.setToolTip('win-rt-rgb -- Realtime RGB suite');
-  const contextMenu = Menu.buildFromTemplate([
-    { label: 'Open', click: () => {
-      if (!mainWindow) {
-        createWindow();
-      }
-      mainWindow?.show();
-    }},
-    { label: 'Exit', click: () => {
-      isQuitting = true;
-      app.quit();
-    }},
-  ]);
-  tray.setContextMenu(contextMenu);
-  tray.on('double-click', () => {
-    mainWindow?.show();
-  });
 
   if (process.env.NODE_ENV === 'development') {
     installExtension(REACT_DEVELOPER_TOOLS)

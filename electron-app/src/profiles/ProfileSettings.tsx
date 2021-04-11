@@ -32,11 +32,12 @@ const useStyles = makeStyles((theme: Theme) =>
       marginRight: 5,
     },
     rectFields: {
-      marginLeft: 10,
+      marginTop: 10,
+      marginBottom: 5,
+      display: 'flex',
       width: '100%',
       '& div': {
-        width: 80,
-        marginBottom: 5,
+        // width: 80,
       }
     },
     icon: {
@@ -51,7 +52,6 @@ const useStyles = makeStyles((theme: Theme) =>
       background: '#525252'
     },
     areaSelectRoot: {
-      display: 'flex',
       marginTop: 20,
       marginLeft: 10,
       marginRight: 10,
