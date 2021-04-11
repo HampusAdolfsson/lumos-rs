@@ -1,6 +1,7 @@
 import React from 'react';
 import { render } from 'react-dom';
 
+import 'fontsource-roboto';
 import { CssBaseline, createMuiTheme } from '@material-ui/core';
 import { ThemeProvider } from '@material-ui/core';
 import { Sidebar } from './Sidebar';
