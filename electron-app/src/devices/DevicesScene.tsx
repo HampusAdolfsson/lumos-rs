@@ -84,6 +84,8 @@ const defaultDevice: IDeviceSpecification = {
   colorTemp: 5500,
   saturationAdjustment: 0,
   valueAdjustment: 0,
+  useAudio: false,
+  preferredMonitor: 0,
   type: null,
   wledData: null,
   qmkData: null,
