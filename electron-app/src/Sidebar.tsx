@@ -1,11 +1,12 @@
 import React from 'react';
-import { Typography } from '@material-ui/core';
+import { List, ListItem, ListItemIcon, ListItemText, Typography } from '@material-ui/core';
+import { DevicesOther } from '@material-ui/icons';
 
 interface State {
 }
 
 interface Props {
-  scenes: string[];
+  scenes: { name: string, icon: JSX.Element }[];
   selectedScene: number;
   onSceneChanged: (i: number) => void;
 }
@@ -28,15 +29,23 @@ export class Sidebar extends React.Component<Props, State> {
     const scenes = this.props.scenes.map((scene, index) => {
       const handler = () => this.props.onSceneChanged(index);
       return (
-        <Typography variant="h1" color={index === this.props.selectedScene ? "primary" : "textPrimary"}
-          onClick={handler} key={scene}>
-          {scene}
-        </Typography>
+        <ListItem button>
+          <ListItemIcon>
+            {scene.icon}
+          </ListItemIcon>
+          <ListItemText primary={scene.name}/>
+        </ListItem>
+        // <Typography variant="h1" color={index === this.props.selectedScene ? "primary" : "textPrimary"}
+        //   onClick={handler} key={scene}>
+        //   {scene}
+        // </Typography>
       );
     });
     return (
       <div className="sidebar">
-        {scenes}
+        <List component="nav">
+          {scenes}
+        </List>
       </div>
     );
   }

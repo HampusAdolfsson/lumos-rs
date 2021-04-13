@@ -2,9 +2,8 @@ import React from 'react';
 import { render } from 'react-dom';
 
 import 'fontsource-roboto';
-import { CssBaseline, createMuiTheme } from '@material-ui/core';
+import { CssBaseline, createMuiTheme, AppBar, Tabs, Tab } from '@material-ui/core';
 import { ThemeProvider } from '@material-ui/core';
-import { Sidebar } from './Sidebar';
 import { DevicesScene } from './devices/DevicesScene';
 import { AboutScene } from './AboutScene';
 
@@ -13,6 +12,7 @@ import { ProfilesScene } from './profiles/ProfilesScene';
 import Alert from '@material-ui/lab/Alert';
 import { WebsocketService } from './WebsocketService';
 import { ProfilesService } from './profiles/ProfilesService';
+import { AspectRatio, Cast, Crop, Info } from '@material-ui/icons';
 
 const mainElement = document.createElement('div');
 mainElement.setAttribute('id', 'root');
@@ -36,15 +36,16 @@ let theme = createMuiTheme({
   }
 });
 
-const scenes: [JSX.Element, string][] = [
-  [<DevicesScene />, "Devices"],
-  [<ProfilesScene />, "Profiles"],
-  [<AboutScene />, "About"],
+const scenes = [
+  [<DevicesScene />, { name: "Devices", icon: <Cast/> }],
+  [<ProfilesScene />, { name: "Profiles", icon: <AspectRatio/> }],
+  [<AboutScene />, { name: "About", icon: <Info/> }],
 ];
 
 interface State {
   visibleScene: number;
   showBackendError: boolean;
+  tabValue: number;
 }
 
 class App extends React.Component<{}, State> {
@@ -54,6 +55,7 @@ class App extends React.Component<{}, State> {
     this.state = {
       visibleScene: 0,
       showBackendError: false,
+      tabValue: 0,
     };
     WebsocketService.Instance.connected.then(connected => {
       if (!connected) {
@@ -75,16 +77,24 @@ class App extends React.Component<{}, State> {
   }
 
   render() {
-    const sceneNames = scenes.map(scene => scene[1]);
+    const value = this.state.tabValue;
     return (
       <>
         <ThemeProvider theme={theme} >
           <CssBaseline />
-          <Sidebar scenes={sceneNames} selectedScene={this.state.visibleScene} onSceneChanged={this.setScene.bind(this)} />
+          <AppBar position="sticky" color="default">
+            <Tabs value={value} onChange={(_, val) => { this.setState({tabValue: val}); }} centered
+                  indicatorColor="primary"
+                  textColor="primary" >
+              <Tab icon={<Cast/>} label="Devices" />
+              <Tab icon={<Crop/>} label="Profiles" />
+              <Tab icon={<Info/>} label="About" />
+            </Tabs>
+          </AppBar>
           <div className="scene">
-          { this.state.showBackendError &&
-            <Alert severity="error" variant="filled" style={{marginBottom: 30}}>Unable to connect to backend. Try restarting the program.</Alert> }
-            {scenes[this.state.visibleScene][0]}
+            {value == 0 && <DevicesScene/>}
+            {value == 1 && <ProfilesScene/>}
+            {value == 2 && <AboutScene/>}
           </div>
         </ThemeProvider>
       </>
