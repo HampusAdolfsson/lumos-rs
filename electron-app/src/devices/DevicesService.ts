@@ -4,6 +4,11 @@ import { BehaviorSubject } from 'rxjs';
 import Path from 'path';
 import { readFileSync, existsSync, mkdirSync, writeFileSync } from 'fs';
 
+export interface IExtendedDeviceSpecification {
+  device: IDeviceSpecification;
+  enabled: boolean;
+}
+
 export class DevicesService {
   private static readonly saveFile = Path.join(process.env.APPDATA || ".", "win-rt-rgb", "devices.json");
 
@@ -25,15 +30,15 @@ export class DevicesService {
 
   private static instance: DevicesService | undefined;
 
-  public readonly devices: BehaviorSubject<IDeviceSpecification[]>;
+  public readonly devices: BehaviorSubject<IExtendedDeviceSpecification[]>;
 
-  private constructor(initialDevices: IDeviceSpecification[]) {
+  private constructor(initialDevices: IExtendedDeviceSpecification[]) {
     this.devices = new BehaviorSubject(initialDevices);
 
     WebsocketService.Instance.sendMessage('devices', initialDevices);
   }
 
-  public setDevices(devices: IDeviceSpecification[]) {
+  public setDevices(devices: IExtendedDeviceSpecification[]) {
     this.devices.next(devices);
     WebsocketService.Instance.sendMessage('devices', devices);
     if (!existsSync(Path.dirname(DevicesService.saveFile))) {

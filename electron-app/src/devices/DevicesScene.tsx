@@ -3,7 +3,7 @@ import { Paper, Button, SvgIcon, makeStyles, Theme, createStyles, Grid, Collapse
 import { DeviceSettings } from './DeviceSettings';
 import AddIcon from '@material-ui/icons/Add';
 import { IDeviceSpecification } from './DeviceSpecification';
-import { DevicesService } from './DevicesService';
+import { DevicesService, IExtendedDeviceSpecification } from './DevicesService';
 
 const useStyles = makeStyles((theme: Theme) =>
   createStyles({
@@ -28,7 +28,7 @@ const useStyles = makeStyles((theme: Theme) =>
 );
 
 export function DevicesScene() {
-  const [devices, setDevices] = useState([] as Array<IDeviceSpecification>);
+  const [devices, setDevices] = useState([] as Array<IExtendedDeviceSpecification>);
 
   useEffect(() => {
     const subscription = DevicesService.Instance.devices.subscribe(profs => setDevices(profs));
@@ -41,17 +41,22 @@ export function DevicesScene() {
 
   const deviceComponents = devices.map((dev, i) => {
     return <div className={classes.deviceEntryRoot}>
-        <DeviceSettings device={dev}
+        <DeviceSettings device={dev.device} enabled={dev.enabled}
           onDeviceDeleted={() => {
-            const newDevs: IDeviceSpecification[] = JSON.parse(JSON.stringify(devices));
+            const newDevs: IExtendedDeviceSpecification[] = JSON.parse(JSON.stringify(devices));
             newDevs.splice(i, 1);
             DevicesService.Instance.setDevices(newDevs);
             setDevices(newDevs);
           }}
-          onDeviceEnabledChanged={() => {}}
+          onDeviceEnabledChanged={(enabled) => {
+            const newDevs: IExtendedDeviceSpecification[] = JSON.parse(JSON.stringify(devices));
+            newDevs[i].enabled = enabled;
+            DevicesService.Instance.setDevices(newDevs);
+            setDevices(newDevs);
+          }}
           onDeviceChanged={dev => {
-            const newDevs: IDeviceSpecification[] = JSON.parse(JSON.stringify(devices));
-            newDevs[i] = dev;
+            const newDevs: IExtendedDeviceSpecification[] = JSON.parse(JSON.stringify(devices));
+            newDevs[i].device = dev;
             DevicesService.Instance.setDevices(newDevs);
             setDevices(newDevs);
           }}

@@ -49,6 +49,7 @@ const useStyles = makeStyles((theme: Theme) =>
 
 interface Props {
   device: IDeviceSpecification;
+  enabled: boolean;
   onDeviceDeleted: () => void;
   onDeviceEnabledChanged: (enabled: boolean) => void;
   onDeviceChanged: (device: IDeviceSpecification) => void;
@@ -61,7 +62,7 @@ enum DeviceTypes {
 
 export function DeviceSettings(props: Props) {
   const [dirty, setDirty] = useState(false);
-  const [enabled, setEnabled] = useState(true);
+  const [enabled, setEnabled] = useState(props.enabled);
   const [device, setDevice] = useState(props.device);
 
   const setField = (name: string, val: any) => {
@@ -139,7 +140,7 @@ export function DeviceSettings(props: Props) {
       </CardContent>
       <Divider />
       <CardActions>
-        <Switch name="enabled" checked={enabled} onChange={(_, v) => setEnabled(v)}/>
+        <Switch name="enabled" checked={enabled} onChange={(_, v) => { setEnabled(v); props.onDeviceEnabledChanged(v); } }/>
         <div className={classes.buttons}>
           <Tooltip title="Delete the device">
             <Button className={classes.deleteButton} size="small" onClick={() => props.onDeviceDeleted()}>Delete</Button>
