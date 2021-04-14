@@ -7,7 +7,6 @@ export interface QmkData {
 
 interface Props {
   data: QmkData | null;
-  enabled: boolean;
   changed: (data: QmkData) => void;
 }
 
@@ -20,6 +19,6 @@ export function QmkSettings(props: Props) {
               setDevName(ev.target.value);
               const newVal = { name: ev.target.value };
               props.changed(newVal);
-            }} disabled={!props.enabled} />
+            }} />
          </div>
 }

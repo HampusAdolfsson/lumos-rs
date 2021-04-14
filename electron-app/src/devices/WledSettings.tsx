@@ -8,7 +8,6 @@ export interface WledData {
 
 interface Props {
   data: WledData | null;
-  enabled: boolean;
   changed: (data: WledData) => void;
 }
 
@@ -21,11 +20,6 @@ export function WledSettings(props: Props) {
             setIpAddress(ev.target.value);
             const newVal = { ipAddress: ev.target.value };
             props.changed(newVal);
-          }} disabled={!props.enabled} />
-          <Button style={{ marginTop: 15, marginLeft: 20 }} size="small" color="secondary" disabled={!ipAddress} onClick={() => {
-            const xmlHttp = new XMLHttpRequest();
-            xmlHttp.open( "GET", `http://${ipAddress}/win&T=2`, true);
-            xmlHttp.send( null );
-          }}>Toggle Power</Button>
+          }} />
           </div>
 }

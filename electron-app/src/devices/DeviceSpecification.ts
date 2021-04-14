@@ -15,3 +15,8 @@ export interface IDeviceSpecification {
     wledData: WledData | null;
     qmkData: QmkData | null
 }
+
+export enum DeviceTypes {
+  WLED,
+  QMK,
+}
