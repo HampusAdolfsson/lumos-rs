@@ -77,7 +77,7 @@ export function DeviceSettings(props: Props) {
 
   const classes = useStyles();
   return (
-    <Dialog open={props.open} onClose={() => {props.onClosed();}} scroll="paper">
+    <Dialog open={props.open} onClose={props.onClosed} scroll="paper">
       <DialogTitle>
         Device Settings
       </DialogTitle>
