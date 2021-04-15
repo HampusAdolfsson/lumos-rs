@@ -1,4 +1,4 @@
-import { IProfile } from './Profile';
+import { IProfileCategory } from './Profile';
 import { WebsocketService } from '../WebsocketService';
 import { BehaviorSubject } from 'rxjs';
 import Path from 'path';
@@ -25,13 +25,13 @@ export class ProfilesService {
 
   private static instance: ProfilesService | undefined;
 
-  public readonly profiles: BehaviorSubject<IProfile[]>;
+  public readonly categories: BehaviorSubject<IProfileCategory[]>;
   public readonly activeProfile = new BehaviorSubject<number | undefined>(undefined);
 
-  private constructor(initialProfiles: IProfile[]) {
-    this.profiles = new BehaviorSubject(initialProfiles);
+  private constructor(initialCategories: IProfileCategory[]) {
+    this.categories = new BehaviorSubject(initialCategories);
 
-    WebsocketService.Instance.sendMessage('profiles', initialProfiles);
+    WebsocketService.Instance.sendMessage('profiles', initialCategories.flatMap(cat => cat.profiles));
     WebsocketService.Instance.receivedMessage.subscribe(message => {
       if (message.subject === 'activeProfile') {
         this.activeProfile.next(message.contents);
@@ -39,23 +39,12 @@ export class ProfilesService {
     });
   }
 
-  public setProfiles(profiles: IProfile[]) {
-    this.profiles.next(profiles);
-    WebsocketService.Instance.sendMessage('profiles', profiles);
+  public setProfiles(categories: IProfileCategory[]) {
+    this.categories.next(categories);
+    WebsocketService.Instance.sendMessage('profiles', categories.flatMap(cat => cat.profiles));
     if (!existsSync(Path.dirname(ProfilesService.saveFile))) {
       mkdirSync(Path.dirname(ProfilesService.saveFile), { recursive: true });
     }
-    writeFileSync(ProfilesService.saveFile, JSON.stringify(profiles));
-  }
-
-  public setLocked(profileIndex: number, monitorIndex: number) {
-    if (profileIndex < 0 || monitorIndex < 0) {
-      return;
-    }
-    WebsocketService.Instance.sendMessage('lock', { profile: profileIndex, monitor: monitorIndex });
-  }
-
-  public setUnlocked() {
-    WebsocketService.Instance.sendMessage('lock', {});
+    writeFileSync(ProfilesService.saveFile, JSON.stringify(categories));
   }
 }

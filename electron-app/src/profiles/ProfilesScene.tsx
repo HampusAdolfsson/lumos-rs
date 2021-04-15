@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { ProfileEntry } from './ProfileEntry';
-import { Button, Divider, makeStyles, createStyles, Theme, TableContainer, Toolbar, Table, TableBody, Paper, TableRow } from '@material-ui/core';
+import { ProfileCategory } from './ProfileCategory';
+import { Button, Divider, makeStyles, createStyles, Theme, TableContainer, Toolbar, Table, TableBody, Paper, TableRow, Collapse, TableCell, Typography, IconButton } from '@material-ui/core';
 import AddIcon from '@material-ui/icons/Add'
-import { IProfile } from './Profile';
+import { IProfile, IProfileCategory } from './Profile';
 import { ProfilesService } from './ProfilesService';
 import { MonitorDialog } from './MonitorDialog';
 
@@ -22,13 +22,11 @@ const useStyles = makeStyles((theme: Theme) =>
 
 
 export function ProfilesScene() {
-  const [profiles, setProfiles] = useState([] as Array<IProfile>);
-  const [lockIndex, setLockIndex] = useState(undefined as (number | undefined));
+  const [categories, setCategories] = useState([] as Array<IProfileCategory>);
   const [activeIndex, setActiveIndex] = useState(undefined as (number | undefined));
-  const [lockCandidateIndex, setlockCandidateIndex] = useState(undefined as (number | undefined));
 
   useEffect(() => {
-    const subscription1 = ProfilesService.Instance.profiles.subscribe(profs => setProfiles(profs));
+    const subscription1 = ProfilesService.Instance.categories.subscribe(cats => setCategories(cats));
     const subscription2 = ProfilesService.Instance.activeProfile.subscribe(index => setActiveIndex(index));
     return () => {
       subscription1.unsubscribe();
@@ -36,31 +34,23 @@ export function ProfilesScene() {
     };
   });
 
-  const profileComponents = profiles.map((prof, i) => {
-    return <TableRow key={i}>
-        <ProfileEntry key={prof.regex} profile={prof} isActive={activeIndex === i} isLocked={lockIndex === i}
-          onProfileChanged={prof => {
-            const newProfs: IProfile[] = JSON.parse(JSON.stringify(profiles));
-            newProfs[i] = prof;
-            ProfilesService.Instance.setProfiles(newProfs);
-            setProfiles(newProfs);
-          }}
-          onProfileDeleted={() => {
-            const newProfs: IProfile[] = JSON.parse(JSON.stringify(profiles));
-            newProfs.splice(i, 1);
-            ProfilesService.Instance.setProfiles(newProfs);
-            setProfiles(newProfs);
-          }}
-          onProfileLocked={() => {
-            if (i === lockIndex) {
-              ProfilesService.Instance.setUnlocked();
-              setLockIndex(undefined);
-            } else {
-              setlockCandidateIndex(i);
-            }
-          }}
-          />
-      </TableRow>
+  const categoryComponents = categories.map((category, i) => {
+    return <>
+      <ProfileCategory key={category.name} category={category}
+        onCategoryChanged={cat => {
+          const newCats: IProfileCategory[] = JSON.parse(JSON.stringify(categories));
+          newCats[i] = cat;
+          ProfilesService.Instance.setProfiles(newCats);
+          setCategories(newCats);
+        }}
+        onCategoryDeleted={() => {
+          const newCats: IProfileCategory[] = JSON.parse(JSON.stringify(categories));
+          newCats.splice(i, 1);
+          ProfilesService.Instance.setProfiles(newCats);
+          setCategories(newCats);
+        }}
+        />
+    </>
   });
 
   const classes = useStyles();
@@ -69,33 +59,24 @@ export function ProfilesScene() {
       <Toolbar>
         <Button color="primary" variant="outlined" disableElevation className={classes.button} startIcon={<AddIcon />}
           onClick={() => {
-              const newProfs = profiles.concat([JSON.parse(JSON.stringify(defaultProfile))]);
-              ProfilesService.Instance.setProfiles(newProfs);
-              setProfiles(newProfs);
+              const newCats = categories.concat([JSON.parse(JSON.stringify(defaultCategory))]);
+              ProfilesService.Instance.setProfiles(newCats);
+              setCategories(newCats);
             }}>
-          Add
+          Add Category
         </Button>
       </Toolbar>
       <Divider/>
-      <Table size="small">
+      <Table>
         <TableBody>
-          {profileComponents}
+          {categoryComponents}
         </TableBody>
       </Table>
-      <MonitorDialog open={lockCandidateIndex !== undefined} onCancel={() => setlockCandidateIndex(undefined)}
-        onSuccess={idx => {
-          ProfilesService.Instance.setLocked(lockCandidateIndex!, idx);
-          setLockIndex(lockCandidateIndex);
-          setlockCandidateIndex(undefined);
-        }}/>
     </TableContainer>
   );
 }
 
-const defaultProfile: IProfile = {
-  regex: '',
-  area: {
-    x: 0, y: 0,
-    width: 1920, height: 1080,
-  },
+const defaultCategory: IProfileCategory = {
+  name: '',
+  profiles: [],
 };

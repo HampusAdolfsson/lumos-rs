@@ -11,3 +11,8 @@ export interface IProfile {
     regex: string;
     area: IRect;
 }
+
+export interface IProfileCategory {
+    name: string;
+    profiles: IProfile[];
+}

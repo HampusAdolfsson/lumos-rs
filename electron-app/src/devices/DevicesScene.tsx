@@ -73,7 +73,7 @@ export function DevicesScene() {
               DevicesService.Instance.setDevices(newDevs);
               setDevices(newDevs);
             }}>
-          Add
+          Add Device
         </Button>
         </Toolbar>
         <Divider/>
