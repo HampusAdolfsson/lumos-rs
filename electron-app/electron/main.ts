@@ -15,7 +15,7 @@ app.setName('win-rt-rgb');
 function createWindow() {
   mainWindow = new BrowserWindow({
     title: 'win-rt-rgb',
-    width: 820,
+    width: 1000,
     height: 1000,
     backgroundColor: '#202020',
     webPreferences: {
