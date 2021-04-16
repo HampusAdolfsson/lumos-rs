@@ -2,7 +2,7 @@ import React from 'react';
 import { render } from 'react-dom';
 
 import 'fontsource-roboto';
-import { CssBaseline, createMuiTheme, AppBar, Tabs, Tab } from '@material-ui/core';
+import { CssBaseline, createMuiTheme, AppBar, Tabs, Tab, Typography } from '@material-ui/core';
 import { ThemeProvider } from '@material-ui/core';
 import { DevicesScene } from './devices/DevicesScene';
 import { AboutScene } from './AboutScene';
@@ -83,6 +83,7 @@ class App extends React.Component<{}, State> {
         <ThemeProvider theme={theme} >
           <CssBaseline />
           <AppBar position="sticky" color="default">
+            <Typography variant="h4" color="textSecondary" style={{position: "fixed", top: 15, left: 20 }}>win-rt-rgb</Typography>
             <Tabs value={value} onChange={(_, val) => { this.setState({tabValue: val}); }} centered
                   indicatorColor="primary"
                   textColor="primary" >
@@ -92,6 +93,8 @@ class App extends React.Component<{}, State> {
             </Tabs>
           </AppBar>
           <div className="scene">
+            {this.state.showBackendError && <Alert severity="error" variant="filled" style={{ marginBottom: 20 }}>
+              Unable to connect to backend. Try restarting the application.</Alert>}
             {value == 0 && <DevicesScene/>}
             {value == 1 && <ProfilesScene/>}
             {value == 2 && <AboutScene/>}
