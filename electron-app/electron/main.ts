@@ -39,7 +39,9 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
-  backendProcess = spawn(path.join(__dirname, 'assets/backend/win-rt-rgb.exe'));
+  if (process.env.NODE_ENV !== 'development') {
+    backendProcess = spawn(path.join(__dirname, 'assets/backend/win-rt-rgb.exe'));
+  }
   backendProcess?.on('exit', code => {
     backendProcessOutput += `Backend process exited with code ${code}.`;
     mainWindow?.webContents.send('log', `Backend process exited with code ${code}.`)
