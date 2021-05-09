@@ -34,7 +34,7 @@ export function DeviceEntry(props: Props) {
             <TableCell align="right" >
               {props.device.type == 0 ?
                 "WLED - " + props.device.wledData?.ipAddress :
-                "Qmk - " + props.device.qmkData?.name}
+                "Qmk - " + truncate(props.device.qmkData?.hardwareId || "", 13)}
             </TableCell>
             <TableCell align="right" >
               {props.device.type == DeviceTypes.WLED && props.device.wledData?.ipAddress &&
@@ -55,4 +55,9 @@ export function DeviceEntry(props: Props) {
               onDeviceChanged={(device) => {setDialogOpen(false); props.onDeviceChanged(device);}}
             />
          </React.Fragment>
+}
+
+function truncate(str: string, maxLength: number): string {
+  if (str.length < maxLength) return str;
+  return str.substring(0, maxLength - 1) + "…";
 }

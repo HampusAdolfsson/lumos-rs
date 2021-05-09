@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { TextField } from '@material-ui/core';
 
 export interface QmkData {
-  name: string;
+  hardwareId: string;
 }
 
 interface Props {
@@ -11,13 +11,13 @@ interface Props {
 }
 
 export function QmkSettings(props: Props) {
-  const [devName, setDevName] = useState(props.data?.name || '');
+  const [hardwareId, setHardwareId] = useState(props.data?.hardwareId || "");
 
   return <div>
-          <TextField label="USB Device Name" color="primary"
-            value={devName} onChange={ev => {
-              setDevName(ev.target.value);
-              const newVal = { name: ev.target.value };
+          <TextField label="Hardware ID" color="primary"
+            value={hardwareId} onChange={ev => {
+              setHardwareId(ev.target.value);
+              const newVal = { hardwareId: ev.target.value };
               props.changed(newVal);
             }} />
          </div>
