@@ -23,11 +23,11 @@ const useStyles = makeStyles((theme: Theme) =>
 
 export function ProfilesScene() {
   const [categories, setCategories] = useState([] as Array<IProfileCategory>);
-  const [activeIndex, setActiveIndex] = useState(undefined as (number | undefined));
+  const [activeProfiles, setActiveProfiles] = useState(new Map<number, number>());
 
   useEffect(() => {
     const subscription1 = ProfilesService.Instance.categories.subscribe(cats => setCategories(cats));
-    const subscription2 = ProfilesService.Instance.activeProfile.subscribe(index => setActiveIndex(index));
+    const subscription2 = ProfilesService.Instance.activeProfiles.subscribe(map => setActiveProfiles(map));
     return () => {
       subscription1.unsubscribe();
       subscription2.unsubscribe();
@@ -36,7 +36,7 @@ export function ProfilesScene() {
 
   const categoryComponents = categories.map((category, i) => {
     return <>
-      <ProfileCategory key={category.name} category={category}
+      <ProfileCategory key={category.name} category={category} activeProfiles={activeProfiles}
         onCategoryChanged={cat => {
           const newCats: IProfileCategory[] = JSON.parse(JSON.stringify(categories));
           newCats[i] = cat;

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { makeStyles, createStyles, Theme, TableCell, IconButton } from '@material-ui/core';
+import { makeStyles, createStyles, Theme, TableCell, IconButton, Typography } from '@material-ui/core';
 import CheckCircleIcon from '@material-ui/icons/CheckCircle';
 import { IProfile } from './Profile';
 import { Delete, Settings } from '@material-ui/icons';
@@ -21,8 +21,10 @@ interface Props {
   onProfileChanged: (profile: IProfile) => void;
   onProfileDeleted: () => void;
 
-  isActive: boolean;
+  activeOnMonitors: number[];
 }
+
+const circledNumbers = ["①", "②"];
 
 export function ProfileEntry(props: Props) {
   const classes = useStyles();
@@ -31,7 +33,9 @@ export function ProfileEntry(props: Props) {
   return (
     <>
       <TableCell>
-        { props.isActive && <CheckCircleIcon color="secondary" className={classes.icon} /> }
+        { props.activeOnMonitors.map(number => (
+          <Typography color="primary" className={classes.icon} display="inline">{circledNumbers[number]} </Typography>
+        ))}
         {props.profile.regex || "New Profile"}
       </TableCell>
       <TableCell>

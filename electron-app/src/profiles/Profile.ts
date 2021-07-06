@@ -8,6 +8,7 @@ export interface IRect {
 }
 
 export interface IProfile {
+    id: number;
     regex: string;
     area: IRect;
 }

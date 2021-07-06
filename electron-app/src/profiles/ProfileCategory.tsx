@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { IProfile, IProfileCategory } from './Profile';
 import { ProfileEntry } from './ProfileEntry';
 import { ProfileSettings } from './ProfileSettings';
+import { ProfilesService } from './ProfilesService';
 
 const useStyles = makeStyles((theme: Theme) =>
   createStyles({
@@ -13,6 +14,9 @@ const useStyles = makeStyles((theme: Theme) =>
     icon: {
       height: 16,
     },
+    addButton: {
+      marginTop: 10,
+    },
   }),
 );
 
@@ -20,13 +24,34 @@ interface Props {
   category: IProfileCategory;
   onCategoryChanged: (category: IProfileCategory) => void;
   onCategoryDeleted: () => void;
+  activeProfiles: Map<number, number>;
 }
+
+const circledNumbers = ["①", "②"];
 
 export function ProfileCategory(props: Props) {
   const classes = useStyles();
   const [expanded, setExpanded] = useState(false);
   const [open, setOpen] = useState(false);
   const [name, setName] = useState(props.category.name);
+
+  const activeMonitors: number[] = [];
+  const activeProfilesRows: JSX.Element[] = [];
+  props.activeProfiles.forEach((val, key) => {
+    if (props.category.profiles.map(prof => prof.id).includes(val)) {
+      activeMonitors.push(key);
+      activeProfilesRows.push((
+        <TableRow>
+        <TableCell style={{ paddingBottom: 0, paddingTop: 0, backgroundColor: '#484848', paddingLeft: 80 }} colSpan={6}>
+          <Box margin={1}>
+            <Typography variant="subtitle1" display="inline" color="primary">{circledNumbers[key]}  </Typography>
+            {props.category.profiles.find(prof => prof.id === val)?.regex}
+          </Box>
+        </TableCell>
+        </TableRow>
+      ));
+    }
+  });
 
   return (
     <>
@@ -36,6 +61,7 @@ export function ProfileCategory(props: Props) {
             { expanded ? <KeyboardArrowDown/> : <KeyboardArrowRight/> }
           </IconButton>
           <Typography variant="subtitle1" display="inline">{props.category.name || "New Category"}</Typography>
+          {/* <Typography variant="subtitle1" display="inline" color="primary"> {activeMonitors.map(monitor => circledNumbers[monitor]).join(" ")}</Typography> */}
         </TableCell>
         <TableCell>
           {props.category.profiles.length} profile(s)
@@ -49,6 +75,7 @@ export function ProfileCategory(props: Props) {
           </IconButton>
         </TableCell>
       </TableRow>
+        {!expanded && activeProfilesRows}
       <TableRow>
         <TableCell style={{ paddingBottom: 0, paddingTop: 0, backgroundColor: '#484848' }} colSpan={6}>
           <Collapse in={expanded} timeout="auto" unmountOnExit>
@@ -57,7 +84,7 @@ export function ProfileCategory(props: Props) {
                 <TableBody>
                   {props.category.profiles.map((profile, i) => (
                     <TableRow>
-                      <ProfileEntry profile={profile} isActive={false}
+                      <ProfileEntry profile={profile} activeOnMonitors={allKeys(props.activeProfiles, profile.id)}
                         onProfileChanged={prof => {
                           const newCategory = JSON.parse(JSON.stringify(props.category));
                           newCategory.profiles[i] = prof;
@@ -73,10 +100,10 @@ export function ProfileCategory(props: Props) {
                   ))}
                 </TableBody>
               </Table>
-              <Button color="primary" disableElevation startIcon={<Add/>}
+              <Button color="primary" disableElevation startIcon={<Add/>} className={classes.addButton}
                 onClick={() => {
                     const newCategory = JSON.parse(JSON.stringify(props.category));
-                    newCategory.profiles.push(JSON.parse(JSON.stringify(defaultProfile)));
+                    newCategory.profiles.push(JSON.parse(JSON.stringify(ProfilesService.Instance.createProfile())));
                     props.onCategoryChanged(newCategory);
                   }}>
                 Add Profile
@@ -104,10 +131,13 @@ export function ProfileCategory(props: Props) {
   );
 }
 
-const defaultProfile: IProfile = {
-  regex: '',
-  area: {
-    x: 0, y: 0,
-    width: 1920, height: 1080,
-  },
-};
+/**
+ * Returns all keys that map to a given value
+ */
+function allKeys<T, U>(map: Map<T, U>, target: U): T[] {
+  const results: T[] = [];
+  map.forEach((val, key) => {
+    if (val === target) results.push(key);
+  });
+  return results;
+}

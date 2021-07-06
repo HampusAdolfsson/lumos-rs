@@ -1,11 +1,12 @@
-import { IProfileCategory } from './Profile';
+import { IProfile, IProfileCategory } from './Profile';
 import { WebsocketService } from '../WebsocketService';
 import { BehaviorSubject } from 'rxjs';
 import Path from 'path';
 import { readFileSync, existsSync, mkdirSync, writeFileSync } from 'fs';
 
 export class ProfilesService {
-  private static readonly saveFile = Path.join(process.env.APPDATA || ".", "win-rt-rgb", "profiles.json");
+  private static readonly profilesSaveFile = Path.join(process.env.APPDATA || ".", "win-rt-rgb", "profiles.json");
+  private static readonly idSaveFile = Path.join(process.env.APPDATA || ".", "win-rt-rgb", "profiles_id.json");
 
   public static get Instance() {
     if (!this.instance) {
@@ -15,26 +16,39 @@ export class ProfilesService {
   }
 
   public static LoadAndInstantiate() {
-    if (existsSync(this.saveFile)) {
-      const profiles = JSON.parse(readFileSync(this.saveFile).toString());
-      this.instance = new ProfilesService(profiles);
-    } else {
-      this.instance = new ProfilesService([]);
+    let profiles = [];
+    let nextId = 0;
+    if (existsSync(this.profilesSaveFile)) {
+      profiles = JSON.parse(readFileSync(this.profilesSaveFile).toString());
     }
+    if (existsSync(this.idSaveFile)) {
+      nextId = JSON.parse(readFileSync(this.idSaveFile).toString()).nextId;
+    }
+    this.instance = new ProfilesService(profiles, nextId);
   }
 
   private static instance: ProfilesService | undefined;
 
   public readonly categories: BehaviorSubject<IProfileCategory[]>;
-  public readonly activeProfile = new BehaviorSubject<number | undefined>(undefined);
+  public readonly activeProfiles = new BehaviorSubject<Map<number, number>>(new Map());
 
-  private constructor(initialCategories: IProfileCategory[]) {
+  private nextId: number;
+
+  private constructor(initialCategories: IProfileCategory[], nextId: number) {
     this.categories = new BehaviorSubject(initialCategories);
+    this.nextId = nextId;
 
     WebsocketService.Instance.sendMessage('profiles', initialCategories.flatMap(cat => cat.profiles));
     WebsocketService.Instance.receivedMessage.subscribe(message => {
       if (message.subject === 'activeProfile') {
-        this.activeProfile.next(message.contents);
+        const monitorIndex = message.contents["monitor"];
+        let newMap = new Map(this.activeProfiles.value);
+        if (message.contents["profile"] != undefined) {
+          newMap.set(monitorIndex, message.contents["profile"]);
+        } else {
+          newMap.delete(monitorIndex);
+        }
+        this.activeProfiles.next(newMap);
       }
     });
   }
@@ -42,9 +56,25 @@ export class ProfilesService {
   public setProfiles(categories: IProfileCategory[]) {
     this.categories.next(categories);
     WebsocketService.Instance.sendMessage('profiles', categories.flatMap(cat => cat.profiles));
-    if (!existsSync(Path.dirname(ProfilesService.saveFile))) {
-      mkdirSync(Path.dirname(ProfilesService.saveFile), { recursive: true });
+    if (!existsSync(Path.dirname(ProfilesService.profilesSaveFile))) {
+      mkdirSync(Path.dirname(ProfilesService.profilesSaveFile), { recursive: true });
     }
-    writeFileSync(ProfilesService.saveFile, JSON.stringify(categories));
+    writeFileSync(ProfilesService.profilesSaveFile, JSON.stringify(categories));
   }
+
+  public createProfile(): IProfile {
+    const profile = {
+      id: this.nextId,
+      regex: '',
+      area: {
+        x: 0, y: 0,
+        width: 1920, height: 1080,
+      },
+    };
+    this.nextId += 1;
+
+    writeFileSync(ProfilesService.idSaveFile, JSON.stringify({ nextId: this.nextId }));
+    return profile;
+  }
+
 }
