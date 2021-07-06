@@ -89,9 +89,9 @@ export function DeviceSettings(props: Props) {
             name="numberOfLeds" value={device.numberOfLeds} onChange={handleInput} />
         </div>
         <div className={classes.horizontal}>
-          <TextField label="Preferred Monitor" color="primary" type="number" className={classes.formField}
+          <TextField label="Preferred Monitor" type="number" className={classes.formField}
             name="preferredMonitor" value={device.preferredMonitor} onChange={handleInput} />
-          <FormControlLabel className={classes.formField} control={<Checkbox color="primary" name="useAudio" checked={device.useAudio} onChange={handleInput}/>}
+          <FormControlLabel className={classes.formField} control={<Checkbox color="secondary" name="useAudio" checked={device.useAudio} onChange={handleInput}/>}
             label="Use Audio"
           />
         </div>
@@ -99,28 +99,28 @@ export function DeviceSettings(props: Props) {
           <Typography gutterBottom >
             Color Temperature (K)
           </Typography>
-          <Slider color="primary" valueLabelDisplay="auto" min={2000} max={10000} step={100}
+          <Slider color="secondary" valueLabelDisplay="auto" min={2000} max={10000} step={100}
             value={device.colorTemp} onChange={(_, val) => { setField("colorTemp", val as number); }}/>
         </div>
         <div className={classes.horizontal}>
           <Typography gutterBottom >
             Gamma
           </Typography>
-          <Slider color="primary" valueLabelDisplay="auto" min={1.0} max={3.0} step={0.1}
+          <Slider color="secondary" valueLabelDisplay="auto" min={1.0} max={3.0} step={0.1}
             value={device.gamma} onChange={(_, val) => { setField("gamma", val as number); }} />
         </div>
         <div className={classes.horizontal}>
           <Typography gutterBottom >
             Saturation Increase (%)
           </Typography>
-          <Slider color="primary" valueLabelDisplay="auto" min={0} max={100} step={5}
+          <Slider color="secondary" valueLabelDisplay="auto" min={0} max={100} step={5}
             value={device.saturationAdjustment} onChange={(_, val) => { setField("saturationAdjustment", val as number); }} />
         </div>
         <div className={classes.horizontal}>
           <Typography gutterBottom >
             Value Increase (%)
           </Typography>
-          <Slider color="primary" valueLabelDisplay="auto" min={0} max={100} step={5}
+          <Slider color="secondary" valueLabelDisplay="auto" min={0} max={100} step={5}
             value={device.valueAdjustment} onChange={(_, val) => { setField("valueAdjustment", val as number); }} />
         </div>
         <Divider className={classes.divider} />

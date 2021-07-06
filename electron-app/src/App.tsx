@@ -12,7 +12,7 @@ import { ProfilesScene } from './profiles/ProfilesScene';
 import Alert from '@material-ui/lab/Alert';
 import { WebsocketService } from './WebsocketService';
 import { ProfilesService } from './profiles/ProfilesService';
-import { AspectRatio, Cast, Crop, Info } from '@material-ui/icons';
+import { Cast, Crop, Info } from '@material-ui/icons';
 
 const mainElement = document.createElement('div');
 mainElement.setAttribute('id', 'root');
@@ -35,12 +35,6 @@ let theme = createMuiTheme({
     },
   }
 });
-
-const scenes = [
-  [<DevicesScene />, { name: "Devices", icon: <Cast/> }],
-  [<ProfilesScene />, { name: "Profiles", icon: <AspectRatio/> }],
-  [<AboutScene />, { name: "About", icon: <Info/> }],
-];
 
 interface State {
   visibleScene: number;
