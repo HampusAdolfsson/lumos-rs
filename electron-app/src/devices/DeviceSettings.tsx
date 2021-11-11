@@ -7,6 +7,9 @@ import { QmkSettings } from './QmkSettings';
 
 const useStyles = makeStyles((theme: Theme) =>
   createStyles({
+    root: {
+      minWidth: "500px",
+    },
     formField: {
       marginBottom: "20px",
     },

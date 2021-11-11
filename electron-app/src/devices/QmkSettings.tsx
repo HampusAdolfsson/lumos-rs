@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { TextField } from '@material-ui/core';
 
-export interface QmkData {
+export interface IQmkData {
   hardwareId: string;
 }
 
 interface Props {
-  data: QmkData | null;
-  changed: (data: QmkData) => void;
+  data: IQmkData | null;
+  changed: (data: IQmkData) => void;
 }
 
 export function QmkSettings(props: Props) {

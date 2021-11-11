@@ -2,13 +2,13 @@
 import React, { useState } from 'react';
 import { Button, TextField } from '@material-ui/core';
 
-export interface WledData {
+export interface IWledData {
   ipAddress: string;
 }
 
 interface Props {
-  data: WledData | null;
-  changed: (data: WledData) => void;
+  data: IWledData | null;
+  changed: (data: IWledData) => void;
 }
 
 export function WledSettings(props: Props) {

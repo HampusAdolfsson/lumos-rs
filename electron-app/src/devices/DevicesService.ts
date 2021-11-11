@@ -21,8 +21,8 @@ export class DevicesService {
 
   public static LoadAndInstantiate() {
     if (existsSync(this.saveFile)) {
-      const profiles = JSON.parse(readFileSync(this.saveFile).toString());
-      this.instance = new DevicesService(profiles);
+      const devices = JSON.parse(readFileSync(this.saveFile).toString());
+      this.instance = new DevicesService(devices);
     } else {
       this.instance = new DevicesService([]);
     }
