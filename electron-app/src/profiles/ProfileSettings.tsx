@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { TextField, Button, makeStyles, createStyles, Theme, Dialog, DialogTitle, DialogActions, DialogContent } from '@material-ui/core';
+// @ts-ignore
 import ReactRegionSelect from 'react-region-select';
 import { IProfile } from './Profile';
 
