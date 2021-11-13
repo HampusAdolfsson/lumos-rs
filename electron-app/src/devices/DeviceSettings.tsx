@@ -58,7 +58,7 @@ export function DeviceSettings(props: Props) {
   const [dirty, setDirty] = useState(false);
   const [device, setDevice] = useState(props.device);
 
-  const setField = (name: string, val: any) => {
+  const setField = (name: keyof IDeviceSpecification, val: any) => {
     let newDevice = JSON.parse(JSON.stringify(device));
     newDevice[name] = val;
     setDevice(newDevice);
@@ -70,7 +70,7 @@ export function DeviceSettings(props: Props) {
     const name = target.name;
     let val: string | number | boolean = target.type === 'checkbox' ? (value === true) : target.value;
     if (target.type == 'number') val = Number(val);
-    setField(name, val);
+    setField(name as keyof IDeviceSpecification, val);
   }
 
   const deviceComponent = device.type === DeviceTypes.WLED ?
@@ -94,9 +94,13 @@ export function DeviceSettings(props: Props) {
         <div className={classes.horizontal}>
           <TextField label="Preferred Monitor" type="number" className={classes.formField}
             name="preferredMonitor" value={device.preferredMonitor} onChange={handleInput} />
-          <FormControlLabel className={classes.formField} control={<Checkbox color="secondary" name="useAudio" checked={device.useAudio} onChange={handleInput}/>}
-            label="Use Audio"
-          />
+            <span>
+              <Typography gutterBottom >
+                Audio Amount (%)
+              </Typography>
+              <Slider color="secondary" valueLabelDisplay="auto" min={0} max={100} step={5}
+              value={device.audioAmount} onChange={(_, val) => { setField("audioAmount", val as number); }}/>
+            </span>
         </div>
         <div className={classes.horizontal}>
           <Typography gutterBottom >
