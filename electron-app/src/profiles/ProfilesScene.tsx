@@ -79,4 +79,5 @@ export function ProfilesScene() {
 const defaultCategory: IProfileCategory = {
   name: '',
   profiles: [],
+  priority: 0,
 };

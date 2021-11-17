@@ -92,15 +92,11 @@ export function DeviceSettings(props: Props) {
             name="numberOfLeds" value={device.numberOfLeds} onChange={handleInput} />
         </div>
         <div className={classes.horizontal}>
-          <TextField label="Preferred Monitor" type="number" className={classes.formField}
-            name="preferredMonitor" value={device.preferredMonitor} onChange={handleInput} />
-            <span>
               <Typography gutterBottom >
                 Audio Amount (%)
               </Typography>
               <Slider color="secondary" valueLabelDisplay="auto" min={0} max={100} step={5}
               value={device.audioAmount} onChange={(_, val) => { setField("audioAmount", val as number); }}/>
-            </span>
         </div>
         <div className={classes.horizontal}>
           <Typography gutterBottom >

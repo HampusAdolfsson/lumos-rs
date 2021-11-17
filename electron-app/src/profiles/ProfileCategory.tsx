@@ -17,6 +17,10 @@ const useStyles = makeStyles((theme: Theme) =>
     addButton: {
       marginTop: 10,
     },
+    formField: {
+      width: "100%",
+      paddingBottom: 5
+    }
   }),
 );
 
@@ -34,6 +38,7 @@ export function ProfileCategory(props: Props) {
   const [expanded, setExpanded] = useState(false);
   const [open, setOpen] = useState(false);
   const [name, setName] = useState(props.category.name);
+  const [priority, setPriority] = useState(props.category.priority);
 
   const activeMonitors: number[] = [];
   const activeProfilesRows: JSX.Element[] = [];
@@ -113,15 +118,18 @@ export function ProfileCategory(props: Props) {
         </TableCell>
       </TableRow>
       <Dialog open={open}>
-        <DialogTitle>Set Name</DialogTitle>
+        <DialogTitle>Category Properties</DialogTitle>
         <DialogContent>
-          <TextField value={name} onChange={(ev) => {setName(ev.target.value);}}/>
+          <TextField label="Name" value={name} onChange={(ev) => {setName(ev.target.value);}} className={classes.formField} />
+          <TextField label="Priority" type="number" value={priority} onChange={(ev) => {setPriority(Number(ev.target.value));}}
+            className={classes.formField}/>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setOpen(false)}>Cancel</Button>
           <Button color="primary" onClick={() => {
-            const newCategory = JSON.parse(JSON.stringify(props.category));
+            const newCategory: IProfileCategory = JSON.parse(JSON.stringify(props.category));
             newCategory.name = name;
+            newCategory.priority = priority;
             props.onCategoryChanged(newCategory);
             setOpen(false);
           }}>Save</Button>

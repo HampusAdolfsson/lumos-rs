@@ -10,7 +10,6 @@ export interface IDeviceSpecification {
     saturationAdjustment: number;
     valueAdjustment: number;
     audioAmount: number;
-    preferredMonitor: number;
     type: number | null;
     wledData: IWledData | null;
     qmkData: IQmkData | null

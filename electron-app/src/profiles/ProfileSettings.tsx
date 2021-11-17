@@ -113,6 +113,7 @@ export function ProfileSettings(props: Props) {
     );
 	};
 
+  const [priority, setPriority] = useState(props.profile.priority?.toString() ?? "");
 
   return (
     <>
@@ -142,12 +143,14 @@ export function ProfileSettings(props: Props) {
                 <TextField label="Height" placeholder="1080" type="number" className={classes.formField}
                   value={profile.area.height} onChange={handleInput} name="height"/>
               </div>
+              <TextField label="Priority" type="number" value={priority} onChange={ev => {setPriority(ev.target.value); setDirty(true);}}/>
             </div>
         </DialogContent>
         <DialogActions>
           <Button color="default" size="small" onClick={props.onClosed}>Cancel</Button>
           <Button color="primary" size="small" disabled={!dirty} onClick={() => {
               setDirty(false);
+              profile.priority = Number.isNaN(Number(priority)) ? undefined : Number(priority);
               props.onProfileChanged(profile);
             }}>
             Save

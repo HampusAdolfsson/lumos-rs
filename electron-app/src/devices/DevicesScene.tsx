@@ -97,7 +97,6 @@ const defaultDevice: IExtendedDeviceSpecification = {
     saturationAdjustment: 0,
     valueAdjustment: 0,
     audioAmount: 0,
-    preferredMonitor: 0,
     type: null,
     wledData: null,
     qmkData: null,

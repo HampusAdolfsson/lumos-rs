@@ -38,7 +38,7 @@ export class ProfilesService {
     this.categories = new BehaviorSubject(initialCategories);
     this.nextId = nextId;
 
-    WebsocketService.Instance.sendMessage('profiles', initialCategories.flatMap(cat => cat.profiles));
+    this.sendProfiles(initialCategories);
     WebsocketService.Instance.receivedMessage.subscribe(message => {
       if (message.subject === 'activeProfile') {
         const monitorIndex = message.contents["monitor"];
@@ -55,7 +55,7 @@ export class ProfilesService {
 
   public setProfiles(categories: IProfileCategory[]) {
     this.categories.next(categories);
-    WebsocketService.Instance.sendMessage('profiles', categories.flatMap(cat => cat.profiles));
+    this.sendProfiles(categories);
     if (!existsSync(Path.dirname(ProfilesService.profilesSaveFile))) {
       mkdirSync(Path.dirname(ProfilesService.profilesSaveFile), { recursive: true });
     }
@@ -70,11 +70,26 @@ export class ProfilesService {
         x: 0, y: 0,
         width: 1920, height: 1080,
       },
+      priority: undefined,
     };
     this.nextId += 1;
 
     writeFileSync(ProfilesService.idSaveFile, JSON.stringify({ nextId: this.nextId }));
     return profile;
+  }
+
+  private sendProfiles(categories: IProfileCategory[]) {
+    const flattenedProfiles = categories.flatMap(category => {
+      const profiles: IProfile[] = JSON.parse(JSON.stringify(category.profiles));
+      profiles.forEach(profile => {
+        if (profile.priority === undefined) {
+          profile.priority = category.priority;
+        }
+      });
+      return profiles;
+    });
+    console.log(flattenedProfiles);
+    WebsocketService.Instance.sendMessage('profiles', flattenedProfiles);
   }
 
 }
