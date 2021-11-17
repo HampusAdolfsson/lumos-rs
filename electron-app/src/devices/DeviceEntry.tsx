@@ -32,7 +32,7 @@ export function DeviceEntry(props: Props) {
 
   if (props.device.type === DeviceTypes.WLED) {
     useEffect(() => {
-      setInterval(async() => {
+      const interval = setInterval(async() => {
         try {
           const res = await fetch(`http://${props.device.wledData?.ipAddress}/json`);
           if (res.status !== 200) {
@@ -44,7 +44,10 @@ export function DeviceEntry(props: Props) {
         } catch (e) {
           setPowerState(WledPowerStatus.UNREACHABLE);
         }
-      }, 5000)
+      }, 5000);
+      return () => {
+        clearInterval(interval);
+      };
     });
   }
 
