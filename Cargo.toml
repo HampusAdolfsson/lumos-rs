@@ -1,0 +1,6 @@
+[workspace]
+
+members = [
+    "win-rt-rgb",
+    "rendering",
+]
