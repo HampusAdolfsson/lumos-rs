@@ -3,4 +3,5 @@
 members = [
     "win-rt-rgb",
     "rendering",
+    "color"
 ]
