@@ -1,23 +1,42 @@
 use rendering::{ RenderBuffer, RenderOutput, WledRenderOutput };
 
+mod pipeline;
+
 fn main() {
-    let mut log_lvl = simplelog::LevelFilter::Warn;
-    #[cfg(debug_assertions)]
-    { log_lvl = simplelog::LevelFilter::Debug; }
     simplelog::TermLogger::init(
-        log_lvl,
+        simplelog::LevelFilter::Debug,
         simplelog::Config::default(),
         simplelog::TerminalMode::Stdout,
         simplelog::ColorChoice::Always
     ).unwrap();
 
-    let mut buffer = RenderBuffer::new(36);
-    let mut output = WledRenderOutput::new(36, "192.168.1.40", 21324).expect("Could not create output");
-    let red = color::RgbF32{red: 1.0, green: 0.0,  blue: 0.0 };
-    let black = color::RgbF32::black();
-    buffer.draw_range(2, &[red, black, black, black, red]);
-    let res = output.draw(&buffer);
-    if let Err(err) = res {
-        log::error!("Failed to draw to output: {}", err);
+    // let mut buffer = RenderBuffer::new(36);
+    let mut output = WledRenderOutput::new(9, "192.168.1.6", 21324).expect("Could not create output");
+    let mut capturer = desktop_capture::DesktopCaptureController::new().expect("Could not create capture controller");
+
+    let mut pipeline = pipeline::Pipeline{
+        steps: Vec::new(),
+        sampler: Box::new(pipeline::frame_sampler::HorizontalFrameSampler{
+            buffer: RenderBuffer::new(9),
+        })
+    };
+    loop {
+        // std::thread::sleep(std::time::Duration::from_millis(200));
+        let frame = capturer.get_frame();
+        if let Err(err) = frame {
+            log::error!("Failed to capture frame: {}", err);
+            continue;
+        }
+        let frame_data = frame.unwrap();
+        let actual_frame = pipeline::frame_sampler::Frame{
+            buffer: frame_data.0,
+            width: frame_data.1.0,
+            height: frame_data.1.1,
+        };
+        let buf = pipeline.build(&actual_frame);
+        let res = output.draw(buf);
+        if let Err(err) = res {
+            log::error!("Failed to draw to output: {}", err);
+        }
     }
 }

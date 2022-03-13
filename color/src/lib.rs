@@ -6,6 +6,7 @@ pub struct Rgb<T: Copy> {
 }
 
 pub type RgbF32 = Rgb<f32>;
+pub type RgbU8 = Rgb<u8>;
 
 impl RgbF32 {
     pub fn black() -> Self {

@@ -3,5 +3,6 @@
 members = [
     "win-rt-rgb",
     "rendering",
-    "color"
+    "desktop-capture",
+    "color",
 ]
