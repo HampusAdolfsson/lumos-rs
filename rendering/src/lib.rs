@@ -3,10 +3,9 @@ use log::*;
 use std::net;
 use simple_error::{ SimpleError, try_with };
 
-/**
-*	Stores color data, and allows clients to write color values.
-*	The color data can be sent to/drawn onto a device using a RenderOutput.
-*/
+/// A one-dimensional vector of color values.
+/// The color values can be sent to/drawn onto a device using a [RenderOutput].
+#[derive(Clone)]
 pub struct RenderBuffer {
     pub data: Vec<RgbF32>,
 }
@@ -18,6 +17,9 @@ impl RenderBuffer {
         }
     }
 
+    /// Draws a slice of color values onto this buffer, starting from `start_index`.
+    ///
+    /// If the slice does not fit, the call is ignored.
     pub fn draw_range(&mut self, start_index: usize, to_draw: &[RgbF32]) -> () {
         if start_index + to_draw.len() > self.data.len() {
             warn!("Drawing outside of RenderBuffer buffer");
@@ -27,15 +29,20 @@ impl RenderBuffer {
         }
     }
 
+    /// Sets all color values to black.
     pub fn clear(&mut self) -> () {
         self.data.fill(RgbF32::black());
     }
 }
 
+/// An output sink for color values (i.e. [RenderBuffer]s).
+///
+/// Typically this will show the color values somewhere, e.g. on a WLED device with an LED strip, or on an RGB keyboard.
 pub trait RenderOutput {
     fn draw(&mut self, buffer: &RenderBuffer) -> Result<(), SimpleError>;
 }
 
+/// A network device running WLED (<https://kno.wled.ge/>).
 pub struct WledRenderOutput<'a> {
     output_buffer: Vec<u8>,
     socket: net::UdpSocket,
@@ -51,7 +58,6 @@ impl<'a> WledRenderOutput<'a> {
         output_buffer[0] = 2; // DRGB protocol
         output_buffer[1] = 2;
         let socket = try_with!(net::UdpSocket::bind("0.0.0.0:4469"), "Couldn't bind socket");
-        // let socket = net::UdpSocket::bind("0.0.0.0:4469").map_err(|err| format!("Couldn't bind socket: {}", err))?;
         Ok(WledRenderOutput {
             output_buffer,
             socket: socket,
@@ -74,14 +80,5 @@ impl<'a> RenderOutput for WledRenderOutput<'a> {
 
         try_with!(self.socket.send_to(&self.output_buffer, format!("{}:{}", self.address, self.port)), format!("{}:{}", self.address, self.port));
         Ok(())
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {
-        let result = 2 + 2;
-        assert_eq!(result, 4);
     }
 }

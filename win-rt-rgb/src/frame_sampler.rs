@@ -1,22 +1,20 @@
-use color::RgbU8;
 use rendering::RenderBuffer;
 
-pub struct Frame {
-    pub buffer: Vec<RgbU8>,
-    pub height: usize,
-    pub width: usize,
-}
-
+/// A [FrameSampler] is responsible for sampling a captured [desktop_capture::Frame] and reducing it
+/// to a one-dimenstional [RenderBuffer] that can be processed further.
 pub trait FrameSampler {
-    fn sample(&mut self, frame: &Frame) -> &RenderBuffer;
+    fn sample(&mut self, frame: &desktop_capture::Frame) -> RenderBuffer;
 }
 
+/// For an N-sized output buffer, divides each frame into N equally sized regions horizontally. Each region
+/// takes up the entire frame vertically. The output values are equal to the mean RGB values of each region.
 pub struct HorizontalFrameSampler {
     pub buffer: RenderBuffer,
 }
 
 impl FrameSampler for HorizontalFrameSampler {
-    fn sample(&mut self, frame: &Frame) -> &RenderBuffer {
+    fn sample(&mut self, frame: &desktop_capture::Frame) -> RenderBuffer {
+        println!("Sampling");
         // TODO: might want to avoid allocating vecs here
         let width = frame.width;
         let mut column_sums = vec![0u32; 3*width];
@@ -47,6 +45,6 @@ impl FrameSampler for HorizontalFrameSampler {
             self.buffer.data[i].green = section_sums[3*i+1] as f32 / (pixels_in_section as f32 * 255.0);
             self.buffer.data[i].blue  = section_sums[3*i+2] as f32 / (pixels_in_section as f32 * 255.0);
         }
-        return &self.buffer;
+        return self.buffer.clone();
     }
 }

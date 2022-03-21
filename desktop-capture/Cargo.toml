@@ -9,3 +9,6 @@ edition = "2021"
 color = { path = "../color" }
 dxgcap = "0.2.4"
 simple-error = "0.2.3"
+futures = "0.3"
+log = "*"
+async-std = { version = "^1.10", features = ["unstable"] }

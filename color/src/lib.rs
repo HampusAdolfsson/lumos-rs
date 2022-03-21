@@ -13,12 +13,3 @@ impl RgbF32 {
         RgbF32{ red: 0.0, green: 0.0, blue: 0.0 }
     }
 }
-
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {
-        let result = 2 + 2;
-        assert_eq!(result, 4);
-    }
-}
