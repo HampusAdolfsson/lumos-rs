@@ -31,7 +31,7 @@ impl<'a> WledRenderOutput<'a> {
         Ok(WledRenderOutput {
             size,
             output_buffer,
-            socket: socket,
+            socket,
             address,
             port,
         })
@@ -42,8 +42,7 @@ impl<'a> RenderOutput for WledRenderOutput<'a> {
     fn draw(&mut self, buffer: &RenderBuffer) -> Result<(), SimpleError> {
         assert_eq!(3*buffer.len() + 2, self.output_buffer.len());
 
-        for i in 0..buffer.len() {
-            let color = &buffer[i];
+        for (i, &color) in buffer.iter().enumerate() {
             self.output_buffer[2 + 3*i] = (color.red * 255f32) as u8;
             self.output_buffer[2 + 3*i + 1] = (color.green * 255f32) as u8;
             self.output_buffer[2 + 3*i + 2] = (color.blue * 255f32) as u8;

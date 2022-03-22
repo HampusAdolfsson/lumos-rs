@@ -30,12 +30,11 @@ impl DesktopCaptureController {
     pub fn new(fps: f32) -> Self {
         let (stop_tx, stop_rx) = mpsc::unbounded();
         let (stream_tx, stream_rx) = mpsc::unbounded();
-        let controller = DesktopCaptureController{
+        DesktopCaptureController{
             generator: Some(generate_frames(fps, stream_rx, stop_rx)),
             stop_chan: stop_tx,
             stream_chan: stream_tx,
-        };
-        controller
+        }
     }
 
     /// Opens a new stream which will receive all captured frames.
@@ -78,7 +77,7 @@ fn generate_frames(fps: f32, streams: mpsc::UnboundedReceiver<mpsc::UnboundedSen
                 select! {
                     _ = interval.next() => {
                         // Capture a frame if needed
-                        if open_streams.len() > 0 {
+                        if !open_streams.is_empty() {
                             let result = match manager.capture_frame() {
                                 Err(e) => Err(capture_err_to_str(e)),
                                 Ok(frame_info) => Ok(
