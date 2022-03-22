@@ -1,3 +1,5 @@
+pub mod hsv_adjustment;
+
 use super::RenderBuffer;
 use futures::stream::{ BoxStream, StreamExt };
 
@@ -20,7 +22,7 @@ pub trait BufferStreamTransformation<'a> {
 
 
 /// Synchronously applies `f` to each buffer of `input` and outputs the result.
-pub fn map<'a, F>(stream: BufferStream<'a>, f: F) -> BufferStream<'a>
+fn map<'a, F>(stream: BufferStream<'a>, f: F) -> BufferStream<'a>
         where F: FnMut(RenderBuffer) -> RenderBuffer + Clone + Send + 'a {
     MapTransformation{ f }.transform(stream)
 }

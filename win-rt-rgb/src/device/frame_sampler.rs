@@ -16,7 +16,7 @@ pub struct HorizontalFrameSampler {
 impl HorizontalFrameSampler {
     pub fn new(size: usize) -> Self {
         HorizontalFrameSampler{
-            buffer: vec![color::RgbF32::black(); size],
+            buffer: vec![color::RgbF32::default(); size],
         }
     }
 }
@@ -59,7 +59,7 @@ pub struct VerticalFrameSampler {
 impl VerticalFrameSampler {
     pub fn new(size: usize) -> Self {
         VerticalFrameSampler{
-            buffer: vec![color::RgbF32::black(); size],
+            buffer: vec![color::RgbF32::default(); size],
         }
     }
 }

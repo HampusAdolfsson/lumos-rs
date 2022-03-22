@@ -4,7 +4,7 @@ use super::output::RenderOutput;
 pub struct DeviceSpecification {
     pub output: Box<dyn RenderOutput>,
     pub sampling_type: SamplingType,
-    pub adjustments: Option<HsvAdjustment>,
+    pub hsv_adjustments: Option<HsvAdjustment>,
     pub smoothing: Option<SmoothingParameters>,
     pub audio_sampling: Option<AudioSamplingParameters>,
 }

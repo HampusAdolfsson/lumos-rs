@@ -27,8 +27,9 @@ impl<'a> RenderDevice<'a> {
             SamplingType::Vertical => Box::new(VerticalFrameSampler::new(spec.output.size())),
             _ => panic!("Not implemented"),
         };
-        if spec.adjustments.is_some() {
-            panic!("Not implemented");
+        let mut stream = frames.map(move |frame| sampler.sample(&frame)).boxed();
+        if let Some(params) = spec.hsv_adjustments {
+            stream = transformations::hsv_adjustment::apply_adjustment(stream, params.hue, params.value, params.saturation);
         }
         if spec.smoothing.is_some() {
             panic!("Not implemented");
@@ -38,7 +39,7 @@ impl<'a> RenderDevice<'a> {
         }
         RenderDevice{
             output: spec.output,
-            stream: frames.map(move |frame| sampler.sample(&frame)).boxed(),
+            stream,
         }
     }
 
