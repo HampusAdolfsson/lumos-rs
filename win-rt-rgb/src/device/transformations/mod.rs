@@ -1,8 +1,9 @@
-use rendering::RenderBuffer;
+use super::RenderBuffer;
 use futures::stream::{ BoxStream, StreamExt };
 
 /// A generically-typed stream of [RenderBuffer]s.
 pub type BufferStream<'a> = BoxStream<'a, RenderBuffer>;
+
 
 /// Transforms a stream of [RenderBuffer]s.
 ///
@@ -16,6 +17,7 @@ pub trait BufferStreamTransformation<'a> {
     /// might need to implement [futures::stream::Stream].
     fn transform(&self, input: BufferStream<'a>) -> BufferStream<'a>;
 }
+
 
 /// Synchronously applies `f` to each buffer of `input` and outputs the result.
 pub fn map<'a, F>(stream: BufferStream<'a>, f: F) -> BufferStream<'a>

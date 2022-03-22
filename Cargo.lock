@@ -529,15 +529,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "rendering"
-version = "0.1.0"
-dependencies = [
- "color",
- "log",
- "simple-error",
-]
-
-[[package]]
 name = "signal-hook"
 version = "0.3.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -747,7 +738,6 @@ dependencies = [
  "desktop-capture",
  "futures",
  "log",
- "rendering",
  "simple-error",
  "simplelog",
 ]

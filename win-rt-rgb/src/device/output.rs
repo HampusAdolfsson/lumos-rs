@@ -1,49 +1,19 @@
-use color::RgbF32;
-use log::*;
-use std::net;
+use super::RenderBuffer;
 use simple_error::{ SimpleError, try_with };
-
-/// A one-dimensional vector of color values.
-/// The color values can be sent to/drawn onto a device using a [RenderOutput].
-#[derive(Clone)]
-pub struct RenderBuffer {
-    pub data: Vec<RgbF32>,
-}
-
-impl RenderBuffer {
-    pub fn new(size: usize) -> Self {
-        RenderBuffer{
-            data: vec![RgbF32::black(); size],
-        }
-    }
-
-    /// Draws a slice of color values onto this buffer, starting from `start_index`.
-    ///
-    /// If the slice does not fit, the call is ignored.
-    pub fn draw_range(&mut self, start_index: usize, to_draw: &[RgbF32]) -> () {
-        if start_index + to_draw.len() > self.data.len() {
-            warn!("Drawing outside of RenderBuffer buffer");
-        } else {
-            let target: &mut [RgbF32] = &mut self.data[start_index..(start_index + to_draw.len())];
-            target.copy_from_slice(to_draw);
-        }
-    }
-
-    /// Sets all color values to black.
-    pub fn clear(&mut self) -> () {
-        self.data.fill(RgbF32::black());
-    }
-}
+use log::info;
+use std::net;
 
 /// An output sink for color values (i.e. [RenderBuffer]s).
 ///
 /// Typically this will show the color values somewhere, e.g. on a WLED device with an LED strip, or on an RGB keyboard.
 pub trait RenderOutput {
     fn draw(&mut self, buffer: &RenderBuffer) -> Result<(), SimpleError>;
+    fn size(&self) -> usize;
 }
 
 /// A network device running WLED (<https://kno.wled.ge/>).
 pub struct WledRenderOutput<'a> {
+    size: usize,
     output_buffer: Vec<u8>,
     socket: net::UdpSocket,
     address: &'a str,
@@ -59,6 +29,7 @@ impl<'a> WledRenderOutput<'a> {
         output_buffer[1] = 2;
         let socket = try_with!(net::UdpSocket::bind("0.0.0.0:4469"), "Couldn't bind socket");
         Ok(WledRenderOutput {
+            size,
             output_buffer,
             socket: socket,
             address,
@@ -69,10 +40,10 @@ impl<'a> WledRenderOutput<'a> {
 
 impl<'a> RenderOutput for WledRenderOutput<'a> {
     fn draw(&mut self, buffer: &RenderBuffer) -> Result<(), SimpleError> {
-        assert_eq!(3*buffer.data.len() + 2, self.output_buffer.len());
+        assert_eq!(3*buffer.len() + 2, self.output_buffer.len());
 
-        for i in 0..buffer.data.len() {
-            let color = &buffer.data[i];
+        for i in 0..buffer.len() {
+            let color = &buffer[i];
             self.output_buffer[2 + 3*i] = (color.red * 255f32) as u8;
             self.output_buffer[2 + 3*i + 1] = (color.green * 255f32) as u8;
             self.output_buffer[2 + 3*i + 2] = (color.blue * 255f32) as u8;
@@ -80,5 +51,9 @@ impl<'a> RenderOutput for WledRenderOutput<'a> {
 
         try_with!(self.socket.send_to(&self.output_buffer, format!("{}:{}", self.address, self.port)), format!("{}:{}", self.address, self.port));
         Ok(())
+    }
+
+    fn size(&self) -> usize {
+        self.size
     }
 }
