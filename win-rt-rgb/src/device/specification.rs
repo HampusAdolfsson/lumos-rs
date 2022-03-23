@@ -1,4 +1,4 @@
-use super::output::RenderOutput;
+use super::RenderOutput;
 
 /// A specification from which a [super::Device] can be created
 pub struct DeviceSpecification<T: RenderOutput> {
