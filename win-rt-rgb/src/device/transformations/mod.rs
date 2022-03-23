@@ -1,4 +1,4 @@
-pub mod hsv_adjustment;
+pub mod color;
 
 use super::RenderBuffer;
 use futures::stream::{ BoxStream, StreamExt };

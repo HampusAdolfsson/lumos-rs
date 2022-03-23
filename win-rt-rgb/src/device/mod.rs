@@ -29,7 +29,7 @@ impl<'a> RenderDevice<'a> {
         };
         let mut stream = frames.map(move |frame| sampler.sample(&frame)).boxed();
         if let Some(params) = spec.hsv_adjustments {
-            stream = transformations::hsv_adjustment::apply_adjustment(stream, params.hue, params.value, params.saturation);
+            stream = transformations::color::apply_adjustment(stream, params.hue, params.value, params.saturation);
         }
         if spec.smoothing.is_some() {
             panic!("Not implemented");
@@ -37,6 +37,8 @@ impl<'a> RenderDevice<'a> {
         if spec.audio_sampling.is_some() {
             panic!("Not implemented");
         }
+
+        stream = transformations::color::apply_gamma(stream, spec.gamma);
         RenderDevice{
             output: spec.output,
             stream,

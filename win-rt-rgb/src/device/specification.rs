@@ -7,6 +7,7 @@ pub struct DeviceSpecification {
     pub hsv_adjustments: Option<HsvAdjustment>,
     pub smoothing: Option<SmoothingParameters>,
     pub audio_sampling: Option<AudioSamplingParameters>,
+    pub gamma: f32,
 }
 
 pub struct AmbilightSamplingParameters {
