@@ -13,13 +13,13 @@ type RenderBuffer = Vec::<color::RgbF32>;
 
 /// A device for which to sample [desktop_capture::Frame]s and render color values.
 /// This struct can be used to drive the entire process of sampling, transforming and drawing to a device.
-pub struct RenderDevice<'a> {
-    output: Box<dyn output::RenderOutput>,
+pub struct RenderDevice<'a, T: output::RenderOutput> {
+    output: T,
     stream: BoxStream<'a, RenderBuffer>
 }
 
-impl<'a> RenderDevice<'a> {
-    pub fn new(spec: DeviceSpecification, frames: BoxStream<'a, desktop_capture::Frame>) -> Self {
+impl<'a, T: output::RenderOutput> RenderDevice<'a, T> {
+    pub fn new(spec: DeviceSpecification<T>, frames: BoxStream<'a, desktop_capture::Frame>) -> Self {
         use frame_sampler::{ FrameSampler, HorizontalFrameSampler, VerticalFrameSampler };
 
         let mut sampler: Box<dyn FrameSampler> = match spec.sampling_type {

@@ -1,8 +1,8 @@
 use super::output::RenderOutput;
 
 /// A specification from which a [super::Device] can be created
-pub struct DeviceSpecification {
-    pub output: Box<dyn RenderOutput>,
+pub struct DeviceSpecification<T: RenderOutput> {
+    pub output: T,
     pub sampling_type: SamplingType,
     pub hsv_adjustments: Option<HsvAdjustment>,
     pub smoothing: Option<SmoothingParameters>,

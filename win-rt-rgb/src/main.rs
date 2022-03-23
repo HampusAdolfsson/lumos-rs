@@ -25,7 +25,7 @@ fn main() {
 
     let capturer = desktop_capture::DesktopCaptureController::new(config::DESKTOP_CAPTURE_FPS);
     let device_spec = device::DeviceSpecification{
-        output: Box::new(device::WledRenderOutput::new(9, "192.168.1.6", 21324).unwrap()),
+        output: device::WledRenderOutput::new(9, "192.168.1.6", 21324).unwrap(),
         sampling_type: device::SamplingType::Vertical,
         hsv_adjustments: Some(device::HsvAdjustment{ hue: 0.0, saturation: 0.0, value: 0.0 }),
         smoothing: None,
