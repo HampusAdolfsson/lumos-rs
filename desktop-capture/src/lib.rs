@@ -12,7 +12,7 @@ pub struct DesktopCaptureController {
     /// A channel used to instruct the generator thread to stop
     stop_chan: mpsc::UnboundedSender<()>,
     /// A channel used to send new senders to the generator whenever a new stream is opened by a subscriber
-    stream_chan: mpsc::UnboundedSender<mpsc::UnboundedSender<DesktopCaptureResult>>,
+    stream_chan: mpsc::UnboundedSender<mpsc::UnboundedSender<Frame>>,
 }
 
 /// A captured desktop frame.
@@ -22,8 +22,6 @@ pub struct Frame {
     pub height: usize,
     pub width: usize,
 }
-
-type DesktopCaptureResult = Result<Frame, &'static str>;
 
 impl DesktopCaptureController {
     /// Creates a new capure controller. It will generate `fps` frames each second.
@@ -43,7 +41,7 @@ impl DesktopCaptureController {
     /// failure to do so can quickly lead to a large buildup of unread frames.
     ///
     /// When the stream is no longer needed, simply drop it.
-    pub fn subscribe(&self) -> mpsc::UnboundedReceiver<DesktopCaptureResult> {
+    pub fn subscribe(&self) -> mpsc::UnboundedReceiver<Frame> {
         let (frame_tx, frame_rx) = mpsc::unbounded();
         self.stream_chan.unbounded_send(frame_tx).unwrap();
         frame_rx
@@ -60,13 +58,15 @@ impl Drop for DesktopCaptureController {
 }
 
 // The actual thread generator. This is run in a separate thread.
-fn generate_frames(fps: f32, streams: mpsc::UnboundedReceiver<mpsc::UnboundedSender<DesktopCaptureResult>>, stop: mpsc::UnboundedReceiver<()>) -> std::thread::JoinHandle<()> {
+fn generate_frames(fps: f32, streams: mpsc::UnboundedReceiver<mpsc::UnboundedSender<Frame>>, stop: mpsc::UnboundedReceiver<()>) -> std::thread::JoinHandle<()> {
     std::thread::spawn(move || {
+        let mut last_frame: Option<Frame> = None;
+
         // The loop listens for a few different events (expressed as streams). Writing this as an async task lets us
         // use the select! macro to listen for all events simultaneously on the same thread.
         let task = async {
             let mut manager = dxgcap::DXGIManager::new(100).map_err(SimpleError::new).expect("Could not create desktop capturer");
-            let mut open_streams = Vec::<mpsc::UnboundedSender<DesktopCaptureResult>>::new();
+            let mut open_streams = Vec::<mpsc::UnboundedSender<Frame>>::new();
 
             let mut interval = async_std::stream::interval(std::time::Duration::from_secs_f32(1.0/fps)).fuse();
             let mut streams_fused = streams.fuse();
@@ -78,19 +78,23 @@ fn generate_frames(fps: f32, streams: mpsc::UnboundedReceiver<mpsc::UnboundedSen
                     _ = interval.next() => {
                         // Capture a frame if needed
                         if !open_streams.is_empty() {
-                            let result = match manager.capture_frame() {
-                                Err(e) => Err(capture_err_to_str(e)),
-                                Ok(frame_info) => Ok(
-                                    Frame{
+                            match manager.capture_frame() {
+                                Err(e) => log_capture_err(e),
+                                Ok(frame_info) => {
+                                    last_frame = Some(Frame{
+                                        // TODO: this map might be expensive...
                                         buffer: frame_info.0.into_iter().map(|col| RgbU8{red: col.r, green: col.g, blue: col.b} ).collect(),
                                         width: frame_info.1.0,
                                         height: frame_info.1.1,
-                                    }
-                                ),
+                                    });
+                                },
                             };
                             for stream in &open_streams {
-                                // TODO: handle Err
-                                stream.unbounded_send(result.clone()).unwrap();
+                                // Always send a frame if possible
+                                if let Some(frame) = last_frame.as_ref() {
+                                    // TODO: handle Err
+                                    stream.unbounded_send(frame.clone()).unwrap();
+                                }
                             }
                         }
                     }, /* interval */
@@ -115,12 +119,12 @@ fn generate_frames(fps: f32, streams: mpsc::UnboundedReceiver<mpsc::UnboundedSen
     })
 }
 
-fn capture_err_to_str(err: dxgcap::CaptureError) -> &'static str {
+fn log_capture_err(err: dxgcap::CaptureError) {
     match err {
-        dxgcap::CaptureError::AccessDenied => "Access denied",
-        dxgcap::CaptureError::AccessLost => "Access lost",
-        dxgcap::CaptureError::RefreshFailure => "Refresh failure",
-        dxgcap::CaptureError::Timeout => "Timeout",
-        dxgcap::CaptureError::Fail(descr) => descr,
-    }
+        dxgcap::CaptureError::AccessDenied => log::error!("Desktop Capture: Access denied"),
+        dxgcap::CaptureError::AccessLost => log::info!("Desktop Capture: Access lost"),
+        dxgcap::CaptureError::RefreshFailure => log::warn!("Desktop Capture: Refresh failure"),
+        dxgcap::CaptureError::Timeout => log::debug!("Desktop Capture: Timeout"),
+        dxgcap::CaptureError::Fail(descr) => log::error!("Desktop Capture: {}", descr),
+    };
 }
