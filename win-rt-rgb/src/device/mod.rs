@@ -5,7 +5,8 @@ mod transformations;
 
 pub use specification::*;
 
-use futures::stream::{ BoxStream, StreamExt };
+use transformations::BufferStreamTransformation;
+use futures::stream::{ Stream, BoxStream, StreamExt };
 use simple_error::SimpleError;
 
 pub type RenderBuffer = Vec::<color::RgbF32>;
@@ -32,7 +33,7 @@ impl<'a, T: RenderOutput> RenderDevice<'a, T> {
     /// Creates a new device from the given [DeviceSpecification].
     ///
     /// When the device is run, it will process frames from the provided stream.
-    pub fn new(spec: DeviceSpecification<T>, frames: BoxStream<'a, desktop_capture::Frame>) -> Self {
+    pub fn new<St: Stream<Item = f32> + std::marker::Send + 'a>(spec: DeviceSpecification<T>, frames: BoxStream<'a, desktop_capture::Frame>, audio: St) -> Self {
         use frame_sampler::{ FrameSampler, HorizontalFrameSampler, VerticalFrameSampler };
 
         let mut sampler: Box<dyn FrameSampler> = match spec.sampling_type {
@@ -50,7 +51,8 @@ impl<'a, T: RenderOutput> RenderDevice<'a, T> {
             panic!("Not implemented");
         }
         if spec.audio_sampling.is_some() {
-            panic!("Not implemented");
+            let transformation = transformations::audio::AudioIntensityTransformation{ audio: audio.boxed() };
+            stream = transformation.transform(stream);
         }
         stream = transformations::color::apply_gamma(stream, spec.gamma);
 
@@ -65,7 +67,10 @@ impl<'a, T: RenderOutput> RenderDevice<'a, T> {
     /// Runs until the frame stream ends.
     pub async fn run(&mut self) {
         while let Some(frame) = self.stream.next().await {
-            self.output.draw(&frame).unwrap();
+            let res = self.output.draw(&frame);
+            if let Err(e) = res {
+                log::error!("Failed to draw to device: {}", e);
+            }
         }
     }
 }

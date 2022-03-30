@@ -1,4 +1,5 @@
 pub mod color;
+pub mod audio;
 
 use super::RenderBuffer;
 use futures::stream::{ BoxStream, StreamExt };
@@ -17,7 +18,7 @@ pub trait BufferStreamTransformation<'a> {
     ///
     /// For simple transformations a call to [StreamExt::map] should suffice, but asynchronous transformations
     /// might need to implement [futures::stream::Stream].
-    fn transform(&self, input: BufferStream<'a>) -> BufferStream<'a>;
+    fn transform(self, input: BufferStream<'a>) -> BufferStream<'a>;
 }
 
 
@@ -33,7 +34,7 @@ struct MapTransformation<F: FnMut(RenderBuffer) -> RenderBuffer + Clone + Send> 
 }
 impl<'a, F> BufferStreamTransformation<'a> for MapTransformation<F>
         where F: FnMut(RenderBuffer) -> RenderBuffer + Clone + Send + 'a {
-    fn transform(&self, input: BufferStream<'a>) -> BufferStream<'a> {
+    fn transform(self, input: BufferStream<'a>) -> BufferStream<'a> {
         input.map(self.f.clone()).boxed()
     }
 }

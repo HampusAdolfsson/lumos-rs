@@ -27,12 +27,14 @@ fn main() {
     info!("Starting application");
 
     let capturer = desktop_capture::DesktopCaptureController::new(config::DESKTOP_CAPTURE_FPS);
+    let audio_thing = audio_capture::AudioCaptureController::new();
+    let audio_stream = audio_thing.subscribe();
     let lamp_spec = device::DeviceSpecification{
         output: outputs::WledRenderOutput::new(9, "192.168.1.6", 21324).unwrap(),
         sampling_type: device::SamplingType::Vertical,
         hsv_adjustments: Some(device::HsvAdjustment{ hue: 0.0, saturation: 0.0, value: 0.0 }),
         smoothing: None,
-        audio_sampling: None,
+        audio_sampling: Some(device::AudioSamplingParameters{amount: 1.0}),
         gamma: 2.0,
     };
     let kbd67_spec = device::DeviceSpecification{
@@ -40,11 +42,12 @@ fn main() {
         sampling_type: device::SamplingType::Horizontal,
         hsv_adjustments: Some(device::HsvAdjustment{ hue: 0.0, saturation: 0.0, value: 0.0 }),
         smoothing: None,
-        audio_sampling: None,
+        // audio_sampling: None,
+        audio_sampling: Some(device::AudioSamplingParameters{amount: 1.0}),
         gamma: 2.0,
     };
-    let mut lamp = device::RenderDevice::new(lamp_spec, capturer.subscribe().boxed());
-    let mut kbd67 = device::RenderDevice::new(kbd67_spec, capturer.subscribe().boxed());
+    let mut lamp = device::RenderDevice::new(lamp_spec, capturer.subscribe().boxed(), audio_stream);
+    let mut kbd67 = device::RenderDevice::new(kbd67_spec, capturer.subscribe().boxed(), audio_thing.subscribe());
 
     futures::executor::block_on(async { futures::join!(lamp.run(), kbd67.run()) });
 }

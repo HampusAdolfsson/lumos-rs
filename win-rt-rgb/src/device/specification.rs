@@ -33,6 +33,6 @@ pub struct SmoothingParameters {
 }
 
 pub struct AudioSamplingParameters {
-    amount: f32,
+    pub amount: f32,
     // TODO: add more parameters as necessary
 }
