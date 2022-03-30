@@ -12,8 +12,8 @@ pub fn apply_adjustment(stream: super::BufferStream, hue: f32, value: f32, satur
         if hue == 0.0 && value == 0.0 && saturation == 0.0 {
             return buffer;
         }
-        for color in &mut buffer {
-            let mut hsv = color.to_hsv();
+        for rgb in &mut buffer {
+            let mut hsv: color::HsvF32 = rgb.into();
 
             hsv.hue += hue;
             if hsv.hue < 0.0 { hsv.hue += 360.0; }
@@ -22,7 +22,7 @@ pub fn apply_adjustment(stream: super::BufferStream, hue: f32, value: f32, satur
             hsv.value      = (hsv.value      + value).clamp(0.0, 1.0);
             hsv.saturation = (hsv.saturation + saturation).clamp(0.0, 1.0);
 
-            *color = hsv.to_rgb()
+            *rgb = hsv.into()
         }
         buffer
     })
