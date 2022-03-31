@@ -1,3 +1,5 @@
+#![feature(vec_retain_mut)]
+
 use byteorder::{NativeEndian, ByteOrder};
 use futures::channel::mpsc;
 use log::{debug, error, info};
@@ -12,13 +14,13 @@ type AudioCaptureResult = f32;
 
 pub struct AudioCaptureController {
     generator: Option<std::thread::JoinHandle<()>>,
-    stop_chan: mpsc::UnboundedSender<()>,
+    stop_chan: std::sync::mpsc::Sender<()>,
     stream_chan: std::sync::mpsc::Sender<mpsc::UnboundedSender<AudioCaptureResult>>,
 }
 
 impl AudioCaptureController {
     pub fn new() -> Self {
-        let (stop_tx, stop_rx) = mpsc::unbounded();
+        let (stop_tx, stop_rx) = std::sync::mpsc::channel();
         let (stream_tx, stream_rx) = std::sync::mpsc::channel();
         Self{
             stop_chan: stop_tx,
@@ -36,7 +38,7 @@ impl AudioCaptureController {
 
 impl Drop for AudioCaptureController {
     fn drop(&mut self) {
-        self.stop_chan.unbounded_send(()).unwrap();
+        self.stop_chan.send(()).unwrap();
         if let Some(gen) = self.generator.take() {
             gen.join().unwrap();
         }
@@ -45,7 +47,7 @@ impl Drop for AudioCaptureController {
 
 
 // The actual audio listener. This is run in a separate thread.
-fn generate_frames(buffers_per_sec: i64, streams: std::sync::mpsc::Receiver<mpsc::UnboundedSender<AudioCaptureResult>>, stop: mpsc::UnboundedReceiver<()>) -> std::thread::JoinHandle<()> {
+fn generate_frames(buffers_per_sec: usize, streams: std::sync::mpsc::Receiver<mpsc::UnboundedSender<AudioCaptureResult>>, stop: std::sync::mpsc::Receiver<()>) -> std::thread::JoinHandle<()> {
     std::thread::Builder::new().name("AudioCapture".to_string()).spawn(move || {
         if let Err(e) = wasapi::initialize_sta() {
             error!("Failed to perform COM initialization: {}", e);
@@ -58,7 +60,6 @@ fn generate_frames(buffers_per_sec: i64, streams: std::sync::mpsc::Receiver<mpsc
         let mut audio_client = device.get_iaudioclient().unwrap();
 
         let desired_format = wasapi::WaveFormat::new(32, 32, &SampleType::Float, 44100, 2);
-
         audio_client.initialize_client(
             &desired_format,
             REFTIMES_PER_SEC / buffers_per_sec as i64,
@@ -69,38 +70,40 @@ fn generate_frames(buffers_per_sec: i64, streams: std::sync::mpsc::Receiver<mpsc
 
         let buffer_frame_count = audio_client.get_bufferframecount().unwrap();
         let blockalign = desired_format.get_blockalign();
-        let hns_actual_duration = REFTIMES_PER_SEC * buffer_frame_count as i64 / audio_client.get_mixformat().unwrap().get_samplespersec() as i64;
-        debug!("bfc: {}, block: {}, actual: {}, requested: {}", buffer_frame_count, blockalign, hns_actual_duration, REFTIMES_PER_SEC / buffers_per_sec);
-        let mut buffer: Vec<u8> = vec![0u8; (buffer_frame_count * blockalign) as usize];
-        let render_client = audio_client.get_audiocaptureclient().unwrap();
+        let mut raw_buffer: Vec<u8> = vec![0u8; (buffer_frame_count * blockalign) as usize];
+        let mut float_buffer: Vec<f32> = vec![0.0; raw_buffer.len() / std::mem::size_of::<f32>()];
+        debug!("Buffer size: {} bytes ({} frames)", raw_buffer.len(), buffer_frame_count);
 
         let mut  output_streams = Vec::<mpsc::UnboundedSender<AudioCaptureResult>>::new();
+        let format = audio_client.get_mixformat().unwrap();
+        let mut sink = audio_sink::AudioSink::new(format.get_nchannels() as usize, format.get_samplespersec() as usize / buffers_per_sec as usize);
 
+        let render_client = audio_client.get_audiocaptureclient().unwrap();
         let h_event = audio_client.set_get_eventhandle().unwrap();
-        debug!("Entering audio loop");
         audio_client.start_stream().unwrap();
-        let mut sink = audio_sink::AudioSink::new(2, audio_client.get_mixformat().unwrap().get_samplespersec() as usize / buffers_per_sec as usize);
+        debug!("Entering audio loop");
+
         loop {
-            let f = render_client.read_from_device(blockalign as usize, &mut buffer).unwrap();
+            let res = render_client.read_from_device(blockalign as usize, &mut raw_buffer).unwrap();
             {
-                let mut floatie = vec![0.0; f.0 as usize * 2];
-                NativeEndian::read_f32_into(&buffer[0..(f.0 as usize * 2 * std::mem::size_of::<f32>())], floatie.as_mut_slice());
-                let res = sink.receive_samples(floatie.as_slice());
+                let float_slice = &mut float_buffer[0..(res.0 as usize * format.get_nchannels() as usize)];
+                NativeEndian::read_f32_into(&raw_buffer[0..(float_slice.len() * std::mem::size_of::<f32>())], float_slice);
+                let res = sink.receive_samples(float_slice.as_ref());
                 if let Some(val) = res {
-                    for st in &mut output_streams {
-                        st.start_send(val).unwrap();
-                    }
+                    // Send value to all streams, and remove any streams that have been closed on the other end
+                    output_streams.retain_mut(|st| st.start_send(val).is_ok());
                 }
             };
-            if f.0 == 0 {
-                std::thread::sleep(std::time::Duration::from_secs_f32(hns_actual_duration as f32 / REFTIMES_PER_SEC as f32) / 2);
-            }
+            // TODO: check for silence flag
             if let Ok(st) = streams.try_recv() {
                 debug!("Opened new audio stream");
                 output_streams.push(st);
             }
+            if let Ok(()) = stop.try_recv() {
+                break;
+            }
             if h_event.wait_for_event(3000).is_err() {
-                error!("timeout error, stopping capture");
+                error!("Timeout error, stopping capture");
                 audio_client.stop_stream().unwrap();
                 break;
             }
