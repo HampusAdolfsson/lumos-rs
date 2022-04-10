@@ -57,9 +57,9 @@ impl Drop for DesktopCaptureController {
     }
 }
 
-// The actual thread generator. This is run in a separate thread.
+// The actual frame generator. This is run in a separate thread.
 fn generate_frames(fps: f32, streams: mpsc::UnboundedReceiver<mpsc::UnboundedSender<Frame>>, stop: mpsc::UnboundedReceiver<()>) -> std::thread::JoinHandle<()> {
-    std::thread::spawn(move || {
+    std::thread::Builder::new().name("DesktopCapture".to_string()).spawn(move || {
         let mut last_frame: Option<Frame> = None;
 
         // The loop listens for a few different events (expressed as streams). Writing this as an async task lets us
@@ -116,7 +116,7 @@ fn generate_frames(fps: f32, streams: mpsc::UnboundedReceiver<mpsc::UnboundedSen
         };
         futures::executor::block_on(task);
         debug!("Frame generator stopped");
-    })
+    }).unwrap()
 }
 
 fn log_capture_err(err: dxgcap::CaptureError) {
