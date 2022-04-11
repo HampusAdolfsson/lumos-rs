@@ -57,10 +57,19 @@ pub struct QmkRenderOutput {
     hid_device: hidapi::HidDevice,
 }
 
+use std::sync::Mutex;
+lazy_static::lazy_static! {
+    /// We can only have one instance of the HID api. This is that instance.
+    static ref API: Mutex<hidapi::HidResult<hidapi::HidApi>> = {
+        Mutex::new(hidapi::HidApi::new())
+    };
+}
+
 impl QmkRenderOutput {
     pub fn new<'a>(size: usize, vendor_id: u16, product_id: u16) -> Result<Self, SimpleError> {
         info!("Creating QMK output of size {} for VID({:#x}) PID({:#x})", size, vendor_id, product_id);
-        let api = hidapi::HidApi::new().map_err(SimpleError::from)?;
+        let guard = API.lock().unwrap();
+        let api = guard.as_ref().map_err(SimpleError::from)?;
         let device = api.open(vendor_id, product_id).map_err(SimpleError::from)?;
 
         let mut output_buffer = vec![0u8; 3 + 3*size];
@@ -86,7 +95,7 @@ impl RenderOutput for QmkRenderOutput {
         }
 
         let bytes_written = self.hid_device.write(&self.output_buffer).map_err(SimpleError::from)?;
-        if bytes_written != self.output_buffer.len() {
+        if bytes_written < self.output_buffer.len() {
             return Err(SimpleError::new(
                 format!("Expected to write {} bytes, but actual value was {}.", self.output_buffer.len(), bytes_written)
             ));
