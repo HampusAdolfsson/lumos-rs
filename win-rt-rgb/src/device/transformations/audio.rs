@@ -6,7 +6,7 @@ use super::super::RenderBuffer;
 
 /// A [super::BufferStreamTransformation] which takes a stream of [RenderBuffer]s and a stream of
 /// audio intensity or "loudness" values (captured from the OS), and continously applies the
-/// audio intensity values to the brightness of the [RenderBuffer]s. This makes the
+/// audio intensity values to the brightness of the [RenderBuffer]s (multiplicatively). This makes the
 /// output "flash" in sync with the sound playing.
 ///
 /// Output is produced when receiving **audio** values, not when receiving [RenderBuffer]s.
@@ -15,11 +15,23 @@ pub struct AudioIntensityTransformation<'a> {
     /// The stream of intensity values to apply to received [RenderBuffer]s.
     /// The values should fit in a [0.0, 1.0] range.
     pub audio: BoxStream<'a, f32>,
+    /// How much the audio intensity affects the brightness of output colors.
+    ///
+    /// At 0.0, the output brightness is always the same as the input brightness,
+    /// and at 1.0 the output brightness ranges between 0 and the input brightness.
+    ///
+    /// Valid values are [0.0, 1.0].
+    pub amount: f32,
 }
 
 impl<'a> super::BufferStreamTransformation<'a> for AudioIntensityTransformation<'a> {
     fn transform(self, input: BufferStream<'a>) -> BufferStream<'a> {
-        (AudioIntensityCombiner{ audio: Some(self.audio), buffers: input, last_buffer: None }).boxed()
+        (AudioIntensityCombiner{
+            audio: Some(self.audio),
+            buffers: input,
+            last_buffer: None,
+            amount: self.amount
+        }).boxed()
     }
 }
 
@@ -32,6 +44,8 @@ struct AudioIntensityCombiner<'a> {
     ///
     /// When we receive an audio intensity value, it is applied to this buffer and the result is sent as output.
     last_buffer: Option<RenderBuffer>,
+    /// See [AudioIntensityTransformation::amount].
+    amount: f32,
 }
 
 impl<'a> Stream for AudioIntensityCombiner<'a> {
@@ -57,7 +71,7 @@ impl<'a> Stream for AudioIntensityCombiner<'a> {
                         Some(intensity_value) => {
                             for color in buffer.iter_mut() {
                                 // TODO: convert to hsv and adjust value instead
-                                color.apply_brightness(intensity_value);
+                                color.apply_brightness(intensity_value * self.amount + (1.0 - self.amount));
                             }
                             return Poll::Ready(Some(buffer));
                         },

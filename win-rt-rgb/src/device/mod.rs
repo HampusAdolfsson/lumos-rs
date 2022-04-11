@@ -22,7 +22,7 @@ pub struct RenderDevice<'a, T: RenderOutput> {
 
 /// An output sink for color values (i.e. [RenderBuffer]s).
 ///
-/// Typically this will show the color values somewhere, e.g. on a WLED device with an LED strip, or on an RGB keyboard.
+/// Typically this represents a physical device, e.g. a WLED device with an LED strip, or an RGB keyboard.
 pub trait RenderOutput {
     fn draw(&mut self, buffer: &RenderBuffer) -> Result<(), SimpleError>;
     fn size(&self) -> usize;
@@ -50,8 +50,11 @@ impl<'a, T: RenderOutput> RenderDevice<'a, T> {
         if spec.smoothing.is_some() {
             panic!("Not implemented");
         }
-        if spec.audio_sampling.is_some() {
-            let transformation = transformations::audio::AudioIntensityTransformation{ audio: audio.boxed() };
+        if let Some(audio_params) = spec.audio_sampling {
+            let transformation = transformations::audio::AudioIntensityTransformation{
+                audio: audio.boxed(),
+                amount: audio_params.amount,
+            };
             stream = transformation.transform(stream);
         }
         stream = transformations::color::apply_gamma(stream, spec.gamma);

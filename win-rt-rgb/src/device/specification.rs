@@ -1,6 +1,6 @@
 use super::RenderOutput;
 
-/// A specification from which a [super::Device] can be created
+/// A specification from which a [super::RenderDevice] can be created
 pub struct DeviceSpecification<T: RenderOutput> {
     pub output: T,
     pub sampling_type: SamplingType,
