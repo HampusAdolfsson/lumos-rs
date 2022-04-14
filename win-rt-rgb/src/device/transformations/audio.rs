@@ -1,10 +1,13 @@
 use core::task::{Poll, Context};
 
+use color::HsvF32;
 use futures::stream::{BoxStream, StreamExt, Stream};
-use super::BufferStream;
-use super::super::RenderBuffer;
+use crate::device::HsvRenderBuffer;
 
-/// A [super::BufferStreamTransformation] which takes a stream of [RenderBuffer]s and a stream of
+use super::{RgbBufferStream, HsvBufferStream};
+use super::super::RgbRenderBuffer;
+
+/// A [super::BufferStreamTransformation] which takes a stream of [super::RenderBuffer]s and a stream of
 /// audio intensity or "loudness" values (captured from the OS), and continously applies the
 /// audio intensity values to the brightness of the [RenderBuffer]s (multiplicatively). This makes the
 /// output "flash" in sync with the sound playing.
@@ -24,8 +27,8 @@ pub struct AudioIntensityTransformation<'a> {
     pub amount: f32,
 }
 
-impl<'a> super::BufferStreamTransformation<'a> for AudioIntensityTransformation<'a> {
-    fn transform(self, input: BufferStream<'a>) -> BufferStream<'a> {
+impl<'a> super::BufferStreamTransformation<'a, HsvF32, HsvF32> for AudioIntensityTransformation<'a> {
+    fn transform(self, input: HsvBufferStream<'a>) -> HsvBufferStream<'a> {
         (AudioIntensityCombiner{
             audio: Some(self.audio),
             buffers: input,
@@ -39,17 +42,17 @@ impl<'a> super::BufferStreamTransformation<'a> for AudioIntensityTransformation<
 /// The [Stream] implementation for [AudioIntensityTransformation].
 struct AudioIntensityCombiner<'a> {
     audio: Option<BoxStream<'a, f32>>,
-    buffers: BufferStream<'a>,
+    buffers: HsvBufferStream<'a>,
     /// The last color buffer we're received.
     ///
     /// When we receive an audio intensity value, it is applied to this buffer and the result is sent as output.
-    last_buffer: Option<RenderBuffer>,
+    last_buffer: Option<HsvRenderBuffer>,
     /// See [AudioIntensityTransformation::amount].
     amount: f32,
 }
 
 impl<'a> Stream for AudioIntensityCombiner<'a> {
-    type Item = RenderBuffer;
+    type Item = HsvRenderBuffer;
 
     fn poll_next(mut self: core::pin::Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         if self.audio.is_some() {
@@ -70,8 +73,7 @@ impl<'a> Stream for AudioIntensityCombiner<'a> {
                         // Apply the intensity value to the last received buffer and forward it.
                         Some(intensity_value) => {
                             for color in buffer.iter_mut() {
-                                // TODO: convert to hsv and adjust value instead
-                                color.apply_brightness(intensity_value * self.amount + (1.0 - self.amount));
+                                color.value *= intensity_value * self.amount + (1.0 - self.amount);
                             }
                             return Poll::Ready(Some(buffer));
                         },

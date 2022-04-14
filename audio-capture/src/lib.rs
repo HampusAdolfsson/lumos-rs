@@ -2,7 +2,7 @@
 
 use byteorder::{NativeEndian, ByteOrder};
 use futures::channel::mpsc;
-use log::{debug, error, info, warn};
+use log::{debug, error, info};
 use wasapi::{Direction, ShareMode, SampleType};
 
 mod audio_sink;
@@ -100,7 +100,7 @@ fn capture_audio(buffers_per_sec: usize, streams: std::sync::mpsc::Receiver<mpsc
                     debug!("Got silence: ({} frames).", res.0);
                 }
                 if res.1.data_discontinuity {
-                    warn!("Got data discontinuity, this may mean that the audio processing is unable to keep up with incoming data.")
+                    info!("Got data discontinuity, too many of these may mean that the audio processing is unable to keep up with incoming data.")
                 }
                 let float_slice = &mut float_buffer[0..(res.0 as usize * format.get_nchannels() as usize)];
                 NativeEndian::read_f32_into(&raw_buffer[0..(float_slice.len() * std::mem::size_of::<f32>())], float_slice);

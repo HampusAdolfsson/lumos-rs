@@ -2,7 +2,7 @@ use simple_error::{ SimpleError, try_with };
 use log::info;
 use std::net;
 
-use crate::device::{ RenderBuffer, RenderOutput };
+use crate::device::{ RgbRenderBuffer, RenderOutput };
 
 /// A network device running WLED (<https://kno.wled.ge/>).
 pub struct WledRenderOutput<'a> {
@@ -32,7 +32,7 @@ impl<'a> WledRenderOutput<'a> {
 }
 
 impl<'a> RenderOutput for WledRenderOutput<'a> {
-    fn draw(&mut self, buffer: &RenderBuffer) -> Result<(), SimpleError> {
+    fn draw(&mut self, buffer: &RgbRenderBuffer) -> Result<(), SimpleError> {
         assert_eq!(3*buffer.len() + 2, self.output_buffer.len());
 
         for (i, &color) in buffer.iter().enumerate() {
@@ -85,7 +85,7 @@ impl QmkRenderOutput {
 }
 
 impl RenderOutput for QmkRenderOutput {
-    fn draw(&mut self, buffer: &RenderBuffer) -> Result<(), SimpleError> {
+    fn draw(&mut self, buffer: &RgbRenderBuffer) -> Result<(), SimpleError> {
         assert_eq!(3*buffer.len() + 3, self.output_buffer.len());
 
         for (i, &color) in buffer.iter().enumerate() {

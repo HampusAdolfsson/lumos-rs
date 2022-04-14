@@ -21,18 +21,6 @@ pub struct Hsv<T> {
 
 pub type HsvF32 = Hsv<f32>;
 
-impl RgbF32
-{
-    /// Multiplies all color channels in-place with `brightness`.
-    /// This is a fast but inaccurate way to apply a brightness value;
-    /// prefer converting to a [Hsv] color and modifying the `value` channel.
-    pub fn apply_brightness(&mut self, brightness: f32) {
-        self.red   *= brightness;
-        self.green *= brightness;
-        self.blue  *= brightness;
-    }
-}
-
 impl<T: Borrow<RgbF32>> From<T> for HsvF32 {
     fn from(source: T) -> HsvF32 {
         let mut out: HsvF32 = HsvF32::default();

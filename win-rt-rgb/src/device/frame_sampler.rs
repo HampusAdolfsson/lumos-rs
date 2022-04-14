@@ -1,16 +1,16 @@
-use super::RenderBuffer;
+use super::RgbRenderBuffer;
 
 /// A [FrameSampler] is responsible for sampling a captured [desktop_capture::Frame] and reducing it
 /// to a one-dimenstional [RenderBuffer] that can be processed further.
 pub trait FrameSampler : Send {
-    fn sample(&mut self, frame: &desktop_capture::Frame) -> RenderBuffer;
+    fn sample(&mut self, frame: &desktop_capture::Frame) -> RgbRenderBuffer;
 }
 
 
 /// For an N-sized output buffer, divides each frame into N equally sized regions horizontally. Each region
 /// takes up the entire frame vertically. The output values are equal to the mean RGB values of each region.
 pub struct HorizontalFrameSampler {
-    buffer: RenderBuffer,
+    buffer: RgbRenderBuffer,
 }
 
 impl HorizontalFrameSampler {
@@ -22,7 +22,7 @@ impl HorizontalFrameSampler {
 }
 
 impl FrameSampler for HorizontalFrameSampler {
-    fn sample(&mut self, frame: &desktop_capture::Frame) -> RenderBuffer {
+    fn sample(&mut self, frame: &desktop_capture::Frame) -> RgbRenderBuffer {
         // TODO: might want to avoid allocating vecs here
         let section_width = frame.width as f64 / self.buffer.len() as f64;
 
@@ -53,7 +53,7 @@ impl FrameSampler for HorizontalFrameSampler {
 /// For an N-sized output buffer, divides each frame into N equally sized regions vertically. Each region
 /// takes up the entire frame horizontally. The output values are equal to the mean RGB values of each region.
 pub struct VerticalFrameSampler {
-    buffer: RenderBuffer,
+    buffer: RgbRenderBuffer,
 }
 
 impl VerticalFrameSampler {
@@ -65,7 +65,7 @@ impl VerticalFrameSampler {
 }
 
 impl FrameSampler for VerticalFrameSampler {
-    fn sample(&mut self, frame: &desktop_capture::Frame) -> RenderBuffer {
+    fn sample(&mut self, frame: &desktop_capture::Frame) -> RgbRenderBuffer {
         // TODO: might want to avoid allocating vecs here
         let section_height = frame.height as f64 / self.buffer.len() as f64;
 

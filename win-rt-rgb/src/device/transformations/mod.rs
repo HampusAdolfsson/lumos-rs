@@ -1,11 +1,16 @@
 pub mod color;
 pub mod audio;
 
+use std::marker::PhantomData;
+
 use super::RenderBuffer;
+use ::color::{RgbF32, HsvF32};
 use futures::stream::{ BoxStream, StreamExt };
 
-/// A generically-typed stream of [RenderBuffer]s.
-pub type BufferStream<'a> = BoxStream<'a, RenderBuffer>;
+/// A generically-typed (i.e. boxed) stream of [RenderBuffer]s.
+pub type BufferStream<'a, T> = BoxStream<'a, RenderBuffer<T>>;
+type RgbBufferStream<'a> = BufferStream<'a, RgbF32>;
+type HsvBufferStream<'a> = BufferStream<'a, HsvF32>;
 
 
 /// Transforms a stream of [RenderBuffer]s.
@@ -13,28 +18,40 @@ pub type BufferStream<'a> = BoxStream<'a, RenderBuffer>;
 /// This may be a simple mapping operation, e.g. increasing the saturation of each value in each buffer of the stream.
 ///
 /// It could also be asynchronous and more complex, such as outputting a moving average of buffers at a lower rate than the input stream.
-pub trait BufferStreamTransformation<'a> {
+///
+/// `I` and `O` represent the input and output color types, respectively.
+pub trait BufferStreamTransformation<'a, I, O> {
     /// Applies the transformation to the input stream, returning a transformed stream.
     ///
     /// For simple transformations a call to [StreamExt::map] should suffice, but asynchronous transformations
     /// might need to implement [futures::stream::Stream].
-    fn transform(self, input: BufferStream<'a>) -> BufferStream<'a>;
+    fn transform(self, input: BufferStream<'a, I>) -> BufferStream<'a, O>;
 }
 
 
-/// Synchronously applies `f` to each buffer of `input` and outputs the result.
-fn map<'a, F>(stream: BufferStream<'a>, f: F) -> BufferStream<'a>
-        where F: FnMut(RenderBuffer) -> RenderBuffer + Clone + Send + 'a {
-    MapTransformation{ f }.transform(stream)
+/// Synchronously applies the function `f` to each buffer of `stream` and outputs the result.
+fn map<'a, F, I, O>(stream: BufferStream<'a, I>, f: F) -> BufferStream<'a, O> where
+        I: 'a,
+        O: 'a,
+        F: FnMut(RenderBuffer<I>) -> RenderBuffer<O> + Clone + Send + 'a {
+    MapTransformation{
+        f,
+        i: PhantomData,
+        o: PhantomData,
+    }.transform(stream)
 }
 
 /// [BufferStreamTransformation] for [map].
-struct MapTransformation<F: FnMut(RenderBuffer) -> RenderBuffer + Clone + Send> {
+struct MapTransformation<I, O, F: FnMut(RenderBuffer<I>) -> RenderBuffer<O> + Clone + Send> {
     f: F,
+    i: PhantomData<I>,
+    o: PhantomData<O>,
 }
-impl<'a, F> BufferStreamTransformation<'a> for MapTransformation<F>
-        where F: FnMut(RenderBuffer) -> RenderBuffer + Clone + Send + 'a {
-    fn transform(self, input: BufferStream<'a>) -> BufferStream<'a> {
+impl<'a, I, O, F> BufferStreamTransformation<'a, I, O> for MapTransformation<I, O, F> where
+    I: 'a,
+    O: 'a,
+    F: FnMut(RenderBuffer<I>) -> RenderBuffer<O> + Clone + Send + 'a {
+    fn transform(self, input: BufferStream<'a, I>) -> BufferStream<'a, O> {
         input.map(self.f.clone()).boxed()
     }
 }

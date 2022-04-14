@@ -9,7 +9,11 @@ use transformations::BufferStreamTransformation;
 use futures::stream::{ Stream, BoxStream, StreamExt };
 use simple_error::SimpleError;
 
-pub type RenderBuffer = Vec::<color::RgbF32>;
+use crate::device::transformations::color::{to_hsv, to_rgb};
+
+pub type RenderBuffer<T> = Vec::<T>;
+pub type RgbRenderBuffer = RenderBuffer::<color::RgbF32>;
+pub type HsvRenderBuffer = RenderBuffer::<color::HsvF32>;
 
 /// A device for which to sample [desktop_capture::Frame]s and render color values.
 /// This struct can be used to drive the entire process of sampling, transforming and drawing to a device.
@@ -17,14 +21,14 @@ pub type RenderBuffer = Vec::<color::RgbF32>;
 /// `T` is the physical device to draw to, see [RenderOutput].
 pub struct RenderDevice<'a, T: RenderOutput> {
     output: T,
-    stream: BoxStream<'a, RenderBuffer>
+    stream: BoxStream<'a, RgbRenderBuffer>
 }
 
 /// An output sink for color values (i.e. [RenderBuffer]s).
 ///
 /// Typically this represents a physical device, e.g. a WLED device with an LED strip, or an RGB keyboard.
 pub trait RenderOutput {
-    fn draw(&mut self, buffer: &RenderBuffer) -> Result<(), SimpleError>;
+    fn draw(&mut self, buffer: &RgbRenderBuffer) -> Result<(), SimpleError>;
     fn size(&self) -> usize;
 }
 
@@ -44,18 +48,24 @@ impl<'a, T: RenderOutput> RenderDevice<'a, T> {
         let mut stream = frames.map(move |frame| sampler.sample(&frame)).boxed();
 
         // Transform the stream according to the specification
-        if let Some(params) = spec.hsv_adjustments {
-            stream = transformations::color::apply_adjustment(stream, params.hue, params.value, params.saturation);
+        {
+            // Transformations in HSV color space
+            let mut hsv_stream = to_hsv(stream);
+            if let Some(params) = spec.hsv_adjustments {
+                hsv_stream = transformations::color::apply_adjustment(hsv_stream, params.hue, params.value, params.saturation);
+            }
+            if let Some(audio_params) = spec.audio_sampling {
+                let transformation = transformations::audio::AudioIntensityTransformation{
+                    audio: audio.boxed(),
+                    amount: audio_params.amount,
+                };
+                hsv_stream = transformation.transform(hsv_stream);
+            }
+            stream = to_rgb(hsv_stream);
         }
+
         if spec.smoothing.is_some() {
             panic!("Not implemented");
-        }
-        if let Some(audio_params) = spec.audio_sampling {
-            let transformation = transformations::audio::AudioIntensityTransformation{
-                audio: audio.boxed(),
-                amount: audio_params.amount,
-            };
-            stream = transformation.transform(stream);
         }
         stream = transformations::color::apply_gamma(stream, spec.gamma);
 
