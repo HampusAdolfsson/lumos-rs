@@ -46,8 +46,8 @@ fn main() {
         audio_sampling: Some(device::AudioSamplingParameters{amount: 1.0}),
         gamma: 2.0,
     };
-    let mut lamp = device::RenderDevice::new(lamp_spec, capturer.subscribe().boxed(), audio_stream);
-    let mut kbd67 = device::RenderDevice::new(kbd67_spec, capturer.subscribe().boxed(), audio_thing.subscribe());
+    let mut lamp = device::RenderDevice::new(lamp_spec, capturer.subscribe().stream().boxed(), audio_stream.stream());
+    let mut kbd67 = device::RenderDevice::new(kbd67_spec, capturer.subscribe().stream().boxed(), audio_thing.subscribe().stream());
 
     futures::executor::block_on(async { futures::join!(lamp.run(), kbd67.run()) });
 }

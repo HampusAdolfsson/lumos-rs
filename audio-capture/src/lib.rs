@@ -1,7 +1,4 @@
-#![feature(vec_retain_mut)]
-
 use byteorder::{NativeEndian, ByteOrder};
-use futures::channel::mpsc;
 use log::{debug, error, info};
 use wasapi::{Direction, ShareMode, SampleType};
 
@@ -18,15 +15,15 @@ type AudioCaptureResult = f32;
 /// Captures audio data from an output device and converts in to a stream of intensity/loudness values.
 pub struct AudioCaptureController {
     generator: Option<std::thread::JoinHandle<()>>,
-    stop_chan: std::sync::mpsc::Sender<()>,
-    stream_chan: std::sync::mpsc::Sender<mpsc::UnboundedSender<AudioCaptureResult>>,
+    stop_chan: flume::Sender<()>,
+    stream_chan: flume::Sender<flume::Sender<AudioCaptureResult>>,
 }
 
 impl AudioCaptureController {
     /// Create a new capture controller.
     pub fn new() -> Self {
-        let (stop_tx, stop_rx) = std::sync::mpsc::channel();
-        let (stream_tx, stream_rx) = std::sync::mpsc::channel();
+        let (stop_tx, stop_rx) = flume::unbounded();
+        let (stream_tx, stream_rx) = flume::unbounded();
         Self{
             stop_chan: stop_tx,
             stream_chan: stream_tx,
@@ -37,8 +34,8 @@ impl AudioCaptureController {
     /// Opens a new stream which will receive all generated audio intensity values.
     ///
     /// When the stream is no longer needed, simply drop it.
-    pub fn subscribe(&self) -> mpsc::UnboundedReceiver<AudioCaptureResult> {
-        let (audio_tx, audio_rx) = mpsc::unbounded();
+    pub fn subscribe(&self) -> flume::Receiver<AudioCaptureResult> {
+        let (audio_tx, audio_rx) = flume::unbounded();
         // TODO: handle Err gracefully (e.g. for when no audio device available).
         self.stream_chan.send(audio_tx).unwrap();
         audio_rx
@@ -56,7 +53,7 @@ impl Drop for AudioCaptureController {
 
 
 // The actual audio listener, run in a separate thread.
-fn capture_audio(buffers_per_sec: usize, streams: std::sync::mpsc::Receiver<mpsc::UnboundedSender<AudioCaptureResult>>, stop: std::sync::mpsc::Receiver<()>) -> std::thread::JoinHandle<()> {
+fn capture_audio(buffers_per_sec: usize, streams: flume::Receiver<flume::Sender<AudioCaptureResult>>, stop: flume::Receiver<()>) -> std::thread::JoinHandle<()> {
     std::thread::Builder::new().name("AudioCapture".to_string()).spawn(move || {
         if let Err(e) = wasapi::initialize_sta() {
             error!("Failed to perform COM initialization: {}", e);
@@ -90,7 +87,7 @@ fn capture_audio(buffers_per_sec: usize, streams: std::sync::mpsc::Receiver<mpsc
         let capture_client = audio_client.get_audiocaptureclient().unwrap();
         let h_event = audio_client.set_get_eventhandle().unwrap();
         audio_client.start_stream().unwrap();
-        let mut output_streams = Vec::<mpsc::UnboundedSender<AudioCaptureResult>>::new();
+        let mut output_streams = Vec::<flume::Sender<AudioCaptureResult>>::new();
 
         debug!("Entering audio loop");
         loop {
@@ -108,7 +105,7 @@ fn capture_audio(buffers_per_sec: usize, streams: std::sync::mpsc::Receiver<mpsc
                 if let Some(val) = res {
                     // Send value to all streams, and remove any streams that have been closed on the other end
                     let intensity =  converter.get_intensity(val);
-                    output_streams.retain_mut(|st| st.start_send(intensity).is_ok());
+                    output_streams.retain_mut(|st| st.try_send(intensity).is_ok());
                 }
             };
             // TODO: check for silence flag

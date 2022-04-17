@@ -12,3 +12,4 @@ simple-error = "0.2.3"
 futures = "0.3"
 log = "*"
 async-std = { version = "^1.10", features = ["unstable"] }
+flume = "0.10.12"
