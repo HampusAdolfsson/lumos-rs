@@ -1,121 +1,82 @@
 use color::RgbU8;
 use simple_error::SimpleError;
-use futures::stream::StreamExt;
-use futures::select;
 use log::debug;
 
-/// Controller for capturing desktop frames.
-pub struct DesktopCaptureController {
-    /// The thread generating frames
-    generator: Option<std::thread::JoinHandle<()>>,
-    /// A channel used to instruct the generator thread to stop
-    stop_chan: flume::Sender<()>,
-    /// A channel used to send new senders to the generator whenever a new stream is opened by a subscriber
-    stream_chan: flume::Sender<flume::Sender<Frame>>,
-}
+use tokio::sync::{watch, broadcast};
+use futures::{select, Future};
 
 /// A captured desktop frame.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Frame {
     pub buffer: Vec<RgbU8>,
     pub height: usize,
     pub width: usize,
 }
 
-impl DesktopCaptureController {
-    /// Creates a new capure controller. It will generate `fps` frames each second.
-    pub fn new(fps: f32) -> Self {
-        let (stop_tx, stop_rx) = flume::unbounded();
-        let (stream_tx, stream_rx) = flume::unbounded();
-        DesktopCaptureController{
-            generator: Some(generate_frames(fps, stream_rx, stop_rx)),
-            stop_chan: stop_tx,
-            stream_chan: stream_tx,
-        }
-    }
+/// Creates a new capture controller. It will generate `fps` frames each second.
+///
+/// The frames are generated in a background thread. The thread runs until all receivers have been dropped, or `shutdown`
+/// is received.
+///
+/// Returns (`frames_rx`, `handle`):
+///
+/// `frames_rx` - receiver that the generator thread sends frames to. This can be cloned to generate new receivers.
+/// The `watch` channel is useful here because it doesn't buffer values; it only ever shows the *latest* value.
+/// This saves new subscribers from seeing all previous values, and also prevents memory buildup when a subscriber
+/// processes frames slower than they are produced.
+///
+/// `handle` - a handle to the thread capturing the frames.
+pub fn capture_desktop_frames(fps: f32, mut shutdown: broadcast::Receiver<()>) -> (watch::Receiver<Frame>, std::thread::JoinHandle<()>) {
+    let (frame_tx, frame_rx) = watch::channel(Frame{buffer: Vec::new(), height: 0, width: 0});
 
-    /// Opens a new stream which will receive all captured frames.
-    ///
-    /// Note that since the receiver is unbounded, you must read from the stream at a rate faster than `fps`;
-    /// failure to do so can quickly lead to a large buildup of unread frames.
-    ///
-    /// When the stream is no longer needed, simply drop it.
-    pub fn subscribe(&self) -> flume::Receiver<Frame> {
-        let (frame_tx, frame_rx) = flume::unbounded();
-        self.stream_chan.try_send(frame_tx).unwrap();
-        frame_rx
-    }
-}
-
-impl Drop for DesktopCaptureController {
-    fn drop(&mut self) {
-        self.stop_chan.try_send(()).unwrap();
-        if let Some(gen) = self.generator.take() {
-            gen.join().unwrap();
-        }
-    }
-}
-
-// The actual frame generator. This is run in a separate thread.
-fn generate_frames(fps: f32, streams: flume::Receiver<flume::Sender<Frame>>, stop: flume::Receiver<()>) -> std::thread::JoinHandle<()> {
-    std::thread::Builder::new().name("DesktopCapture".to_string()).spawn(move || {
-        let mut last_frame: Option<Frame> = None;
-
-        // The loop listens for a few different events (expressed as streams). Writing this as an async task lets us
-        // use the select! macro to listen for all events simultaneously on the same thread.
-        let task = async {
+    // Since parts of the windows API are not Send, this cannot be run in a multi-threaded tokio runtime. Instead, we
+    // spawn a new thread for it and run a single-threaded blocking runtime.
+    let handle = std::thread::Builder::new().name("DesktopCapture".to_string()).spawn(move || {
+        let task = async move {
+            let mut last_frame: Option<Frame> = None;
             let mut manager = dxgcap::DXGIManager::new(100).map_err(SimpleError::new).expect("Could not create desktop capturer");
-            let mut open_streams = Vec::<flume::Sender<Frame>>::new();
-
-            let mut interval = async_std::stream::interval(std::time::Duration::from_secs_f32(1.0/fps)).fuse();
-            let mut streams_fused = streams.stream().fuse();
-            let mut stop_fused = stop.stream().fuse();
+            let mut interval = tokio::time::interval(std::time::Duration::from_secs_f32(1.0/fps));
 
             // The event loop, runs until we receive from `stop`.
             loop {
-                select! {
-                    _ = interval.next() => {
+                tokio::select! {
+                    _ = interval.tick() => {
                         // Capture a frame if needed
-                        if !open_streams.is_empty() {
-                            match manager.capture_frame() {
-                                Err(e) => log_capture_err(e),
-                                Ok(frame_info) => {
-                                    last_frame = Some(Frame{
-                                        // TODO: this map might be expensive...
-                                        buffer: frame_info.0.into_iter().map(|col| RgbU8{red: col.r, green: col.g, blue: col.b} ).collect(),
-                                        width: frame_info.1.0,
-                                        height: frame_info.1.1,
-                                    });
-                                },
-                            };
-                            for stream in &open_streams {
-                                // Always send a frame if possible
-                                if let Some(frame) = last_frame.as_ref() {
-                                    // TODO: handle Err
-                                    stream.try_send(frame.clone()).unwrap();
-                                }
+                        match manager.capture_frame() {
+                            Err(e) => log_capture_err(e),
+                            Ok(frame_info) => {
+                                last_frame = Some(Frame{
+                                    // TODO: this map might be expensive...
+                                    buffer: frame_info.0.into_iter().map(|col| RgbU8{red: col.r, green: col.g, blue: col.b} ).collect(),
+                                    width: frame_info.1.0,
+                                    height: frame_info.1.1,
+                                });
+                            },
+                        };
+                        // Always send a frame if possible
+                        if let Some(frame) = last_frame.as_ref() {
+                            if let Err(_) = frame_tx.send(frame.clone()) {
+                                // All receivers have been dropped.
+                                break;
                             }
                         }
                     }, /* interval */
-                    val = streams_fused.next() => {
-                        // A new output stream was created
-                        if let Some(new_stream) = val {
-                            debug!("Opened new frame stream");
-                            open_streams.push(new_stream);
-                        }
-                    },
-                    val = stop_fused.next() => {
-                        // Sent when owning struct is dropped, finish this task
-                        if val.is_some() {
-                            break;
-                        }
+                    _ = shutdown.recv() => {
+                        // The program is exiting, quit the loop and finish this task
+                        break;
                     }
                 }
             }
         };
-        futures::executor::block_on(task);
+
+        let rt = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build().unwrap();
+        rt.block_on(task);
         debug!("Frame generator stopped");
-    }).unwrap()
+    }).unwrap();
+
+    (frame_rx, handle)
 }
 
 fn log_capture_err(err: dxgcap::CaptureError) {
@@ -127,3 +88,4 @@ fn log_capture_err(err: dxgcap::CaptureError) {
         dxgcap::CaptureError::Fail(descr) => log::error!("Desktop Capture: {}", descr),
     };
 }
+

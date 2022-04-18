@@ -4,8 +4,7 @@ use color::HsvF32;
 use futures::stream::{BoxStream, StreamExt, Stream};
 use crate::device::HsvRenderBuffer;
 
-use super::{RgbBufferStream, HsvBufferStream};
-use super::super::RgbRenderBuffer;
+use super::HsvBufferStream;
 
 /// A [super::BufferStreamTransformation] which takes a stream of [super::RenderBuffer]s and a stream of
 /// audio intensity or "loudness" values (captured from the OS), and continously applies the

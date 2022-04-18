@@ -11,5 +11,5 @@ dxgcap = "0.2.4"
 simple-error = "0.2.3"
 futures = "0.3"
 log = "*"
-async-std = { version = "^1.10", features = ["unstable"] }
-flume = "0.10.12"
+tokio = { version = "1.17.0", features = ["sync", "macros", "time"] }
+tokio-stream = { version = "0.1.8", features = ["sync"] }

@@ -1,6 +1,7 @@
 use byteorder::{NativeEndian, ByteOrder};
 use log::{debug, error, info};
 use wasapi::{Direction, ShareMode, SampleType};
+use tokio::sync::{watch, broadcast};
 
 mod audio_sink;
 mod wave_to_intensity;
@@ -10,50 +11,15 @@ const REFTIMES_PER_SEC: i64 = 10_000_000;
 
 type AudioCaptureResult = f32;
 
-/// An audio data capturer.
-///
 /// Captures audio data from an output device and converts in to a stream of intensity/loudness values.
-pub struct AudioCaptureController {
-    generator: Option<std::thread::JoinHandle<()>>,
-    stop_chan: flume::Sender<()>,
-    stream_chan: flume::Sender<flume::Sender<AudioCaptureResult>>,
+/// TODO: this should be converted to return a future instead of a join handle if possible, but some winapi types may not be [Send].
+pub fn capture_audio_intensity(shutdown: broadcast::Receiver<()>) -> (watch::Receiver<AudioCaptureResult>, std::thread::JoinHandle<()>) {
+    let (intensity_tx, intensity_rx) = watch::channel(0.0);
+    (intensity_rx, capture_audio(30, intensity_tx, shutdown))
 }
-
-impl AudioCaptureController {
-    /// Create a new capture controller.
-    pub fn new() -> Self {
-        let (stop_tx, stop_rx) = flume::unbounded();
-        let (stream_tx, stream_rx) = flume::unbounded();
-        Self{
-            stop_chan: stop_tx,
-            stream_chan: stream_tx,
-            generator: Some(capture_audio(30, stream_rx, stop_rx)),
-        }
-    }
-
-    /// Opens a new stream which will receive all generated audio intensity values.
-    ///
-    /// When the stream is no longer needed, simply drop it.
-    pub fn subscribe(&self) -> flume::Receiver<AudioCaptureResult> {
-        let (audio_tx, audio_rx) = flume::unbounded();
-        // TODO: handle Err gracefully (e.g. for when no audio device available).
-        self.stream_chan.send(audio_tx).unwrap();
-        audio_rx
-    }
-}
-
-impl Drop for AudioCaptureController {
-    fn drop(&mut self) {
-        self.stop_chan.send(()).unwrap();
-        if let Some(gen) = self.generator.take() {
-            gen.join().unwrap();
-        }
-    }
-}
-
 
 // The actual audio listener, run in a separate thread.
-fn capture_audio(buffers_per_sec: usize, streams: flume::Receiver<flume::Sender<AudioCaptureResult>>, stop: flume::Receiver<()>) -> std::thread::JoinHandle<()> {
+fn capture_audio(buffers_per_sec: usize, intensity_tx: watch::Sender<AudioCaptureResult>, mut shutdown: broadcast::Receiver<()>) -> std::thread::JoinHandle<()> {
     std::thread::Builder::new().name("AudioCapture".to_string()).spawn(move || {
         if let Err(e) = wasapi::initialize_sta() {
             error!("Failed to perform COM initialization: {}", e);
@@ -87,7 +53,6 @@ fn capture_audio(buffers_per_sec: usize, streams: flume::Receiver<flume::Sender<
         let capture_client = audio_client.get_audiocaptureclient().unwrap();
         let h_event = audio_client.set_get_eventhandle().unwrap();
         audio_client.start_stream().unwrap();
-        let mut output_streams = Vec::<flume::Sender<AudioCaptureResult>>::new();
 
         debug!("Entering audio loop");
         loop {
@@ -105,15 +70,13 @@ fn capture_audio(buffers_per_sec: usize, streams: flume::Receiver<flume::Sender<
                 if let Some(val) = res {
                     // Send value to all streams, and remove any streams that have been closed on the other end
                     let intensity =  converter.get_intensity(val);
-                    output_streams.retain_mut(|st| st.try_send(intensity).is_ok());
+                    if let Err(_) = intensity_tx.send(intensity) {
+                        // All receivers have closed, no point in running any longer
+                        break;
+                    }
                 }
             };
-            // TODO: check for silence flag
-            if let Ok(st) = streams.try_recv() {
-                debug!("Opened new audio stream");
-                output_streams.push(st);
-            }
-            if let Ok(()) = stop.try_recv() {
+            if let Ok(()) = shutdown.try_recv() {
                 break;
             }
             if h_event.wait_for_event(3000).is_err() {

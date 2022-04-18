@@ -13,3 +13,5 @@ wasapi = "0.12"
 byteorder = "1.4.3"
 realfft = "3.0.0"
 flume = "0.10.12"
+tokio-stream = { version = "0.1.8", features = ["sync"] }
+tokio = { version = "1.17.0", features = ["sync"] }
