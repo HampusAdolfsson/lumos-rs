@@ -3,6 +3,7 @@ mod specification;
 mod frame_sampler;
 mod transformations;
 
+use log::debug;
 pub use specification::*;
 
 use transformations::BufferStreamTransformation;
@@ -19,8 +20,8 @@ pub type HsvRenderBuffer = RenderBuffer::<color::HsvF32>;
 /// This struct can be used to drive the entire process of sampling, transforming and drawing to a device.
 ///
 /// `T` is the physical device to draw to, see [RenderOutput].
-pub struct RenderDevice<'a, T: RenderOutput> {
-    output: T,
+pub struct RenderDevice<'a> {
+    output: Box<dyn RenderOutput + Send>,
     stream: BoxStream<'a, RgbRenderBuffer>
 }
 
@@ -33,11 +34,14 @@ pub trait RenderOutput {
 }
 
 
-impl<'a, T: RenderOutput> RenderDevice<'a, T> {
+impl<'a> RenderDevice<'a> {
     /// Creates a new device from the given [DeviceSpecification].
     ///
     /// When the device is run, it will process frames from the provided stream.
-    pub fn new<St: Stream<Item = f32> + std::marker::Send + 'a>(spec: DeviceSpecification<T>, frames: BoxStream<'a, desktop_capture::Frame>, audio: St) -> Self {
+    pub fn new<U, V>(spec: DeviceSpecification, frames: U, audio: V) -> Self where
+        U: Stream<Item = desktop_capture::Frame> + std::marker::Send + 'a,
+        V: Stream<Item = f32> + std::marker::Send + 'a,
+    {
         use frame_sampler::{ FrameSampler, HorizontalFrameSampler, VerticalFrameSampler };
 
         let mut sampler: Box<dyn FrameSampler> = match spec.sampling_type {
@@ -45,7 +49,7 @@ impl<'a, T: RenderOutput> RenderDevice<'a, T> {
             SamplingType::Vertical => Box::new(VerticalFrameSampler::new(spec.output.size())),
             _ => panic!("Not implemented"),
         };
-        let mut stream = frames.map(move |frame| sampler.sample(&frame)).boxed();
+        let mut stream = frames.boxed().map(move |frame| sampler.sample(&frame)).boxed();
 
         // Transform the stream according to the specification
         {
@@ -85,5 +89,6 @@ impl<'a, T: RenderOutput> RenderDevice<'a, T> {
                 log::error!("Failed to draw to device: {}", e);
             }
         }
+        debug!("Frame stream ended");
     }
 }

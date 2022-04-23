@@ -3,7 +3,6 @@ use simple_error::SimpleError;
 use log::debug;
 
 use tokio::sync::{watch, broadcast};
-use futures::{select, Future};
 
 /// A captured desktop frame.
 #[derive(Clone, Debug)]
@@ -84,7 +83,7 @@ fn log_capture_err(err: dxgcap::CaptureError) {
         dxgcap::CaptureError::AccessDenied => log::error!("Desktop Capture: Access denied"),
         dxgcap::CaptureError::AccessLost => log::info!("Desktop Capture: Access lost"),
         dxgcap::CaptureError::RefreshFailure => log::warn!("Desktop Capture: Refresh failure"),
-        dxgcap::CaptureError::Timeout => log::debug!("Desktop Capture: Timeout"),
+        dxgcap::CaptureError::Timeout => (),
         dxgcap::CaptureError::Fail(descr) => log::error!("Desktop Capture: {}", descr),
     };
 }

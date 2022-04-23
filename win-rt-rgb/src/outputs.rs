@@ -5,16 +5,16 @@ use std::net;
 use crate::device::{ RgbRenderBuffer, RenderOutput };
 
 /// A network device running WLED (<https://kno.wled.ge/>).
-pub struct WledRenderOutput<'a> {
+pub struct WledRenderOutput {
     size: usize,
     output_buffer: Vec<u8>,
     socket: net::UdpSocket,
-    address: &'a str,
+    address: String,
     port: u32,
 }
 
-impl<'a> WledRenderOutput<'a> {
-    pub fn new(size: usize, address: &'a str, port: u32) -> Result<Self, SimpleError> {
+impl WledRenderOutput {
+    pub fn new(size: usize, address: String, port: u32) -> Result<Self, SimpleError> {
         info!("Creating WLED output of size {} for address '{}'", size, address);
 
         let mut output_buffer = vec![0u8; 2 + 3*size];
@@ -31,7 +31,7 @@ impl<'a> WledRenderOutput<'a> {
     }
 }
 
-impl<'a> RenderOutput for WledRenderOutput<'a> {
+impl RenderOutput for WledRenderOutput {
     fn draw(&mut self, buffer: &RgbRenderBuffer) -> Result<(), SimpleError> {
         assert_eq!(3*buffer.len() + 2, self.output_buffer.len());
 
