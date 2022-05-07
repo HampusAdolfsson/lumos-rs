@@ -1,0 +1,11 @@
+html, body {
+    height: 100%;
+}
+
+.scene {
+    padding: 25px 50px;
+}
+
+a {
+    color: #df78ef;
+}
