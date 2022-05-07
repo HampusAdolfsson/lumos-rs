@@ -394,6 +394,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "lumos-rs"
+version = "0.1.0"
+dependencies = [
+ "audio-capture",
+ "color",
+ "desktop-capture",
+ "futures",
+ "hidapi",
+ "lazy_static",
+ "log",
+ "regex",
+ "serde",
+ "serde_json",
+ "simple-error",
+ "simplelog",
+ "tokio",
+ "tokio-stream",
+ "tokio-tungstenite",
+ "windows 0.35.0",
+ "wineventhook",
+]
+
+[[package]]
 name = "matches"
 version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1119,29 +1142,6 @@ name = "widestring"
 version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "17882f045410753661207383517a6f62ec3dbeb6a4ed2acce01f0728238d1983"
-
-[[package]]
-name = "win-rt-rgb"
-version = "0.1.0"
-dependencies = [
- "audio-capture",
- "color",
- "desktop-capture",
- "futures",
- "hidapi",
- "lazy_static",
- "log",
- "regex",
- "serde",
- "serde_json",
- "simple-error",
- "simplelog",
- "tokio",
- "tokio-stream",
- "tokio-tungstenite",
- "windows 0.35.0",
- "wineventhook",
-]
 
 [[package]]
 name = "winapi"

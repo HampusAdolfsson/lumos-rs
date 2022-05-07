@@ -1,7 +1,7 @@
 [workspace]
 
 members = [
-    "win-rt-rgb",
+    "lumos-rs",
     "desktop-capture",
     "audio-capture",
     "color",
