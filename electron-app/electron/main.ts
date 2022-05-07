@@ -23,6 +23,10 @@ function createWindow() {
     },
     icon: path.join(__dirname, 'assets/icon.png'),
   });
+  mainWindow.webContents.on('new-window', function(e, url) {
+    e.preventDefault();
+    require('electron').shell.openExternal(url);
+  });
 
   if (process.env.NODE_ENV === 'development') {
     mainWindow.loadURL('http://localhost:4000');

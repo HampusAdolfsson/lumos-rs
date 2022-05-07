@@ -1,4 +1,4 @@
-import { Button, createStyles, Dialog, DialogActions, DialogContent, DialogTitle, Icon, IconButton, makeStyles, Switch, TableCell, Theme, Typography } from '@material-ui/core';
+import { Button, createStyles, Dialog, DialogActions, DialogContent, DialogTitle, Icon, IconButton, Link, makeStyles, Switch, TableCell, Theme, Typography } from '@material-ui/core';
 import { Delete, PowerSettingsNew, Settings, WbIncandescent } from '@material-ui/icons';
 import React, { useEffect, useState } from 'react';
 import { DeviceSettings } from './DeviceSettings';
@@ -44,7 +44,7 @@ export function DeviceEntry(props: Props) {
         } catch (e) {
           setPowerState(WledPowerStatus.UNREACHABLE);
         }
-      }, 5000);
+      }, 1000);
       return () => {
         clearInterval(interval);
       };
@@ -59,8 +59,8 @@ export function DeviceEntry(props: Props) {
             <TableCell align="right" >{props.device.numberOfLeds} LEDs</TableCell>
             <TableCell align="right" >
               {props.device.type == 0 ?
-                "WLED - " + props.device.wledData?.ipAddress :
-                "Qmk - " + truncate(props.device.qmkData?.hardwareId || "", 13)}
+                <>WLED - <Link target="_blank" href={"http://"+props.device.wledData?.ipAddress}>{props.device.wledData?.ipAddress}</Link></> :
+                <>Qmk - {truncate(props.device.qmkData?.hardwareId || "", 13)} </>}
             </TableCell>
             <TableCell align="right" >
               {props.device.type == DeviceTypes.WLED && props.device.wledData?.ipAddress &&
