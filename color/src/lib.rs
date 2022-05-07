@@ -1,7 +1,7 @@
 use std::borrow::Borrow;
 
 /// A color value in the RGB color space
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct Rgb<T> {
     pub red:   T,
     pub green: T,
@@ -24,20 +24,17 @@ pub type HsvF32 = Hsv<f32>;
 impl<T: Borrow<RgbF32>> From<T> for HsvF32 {
     fn from(source: T) -> HsvF32 {
         let mut out: HsvF32 = HsvF32::default();
-        let mut min: f32;
-        let mut max: f32;
-        let delta: f32;
 
         let this = source.borrow();
 
-        min = if this.red < this.green { this.red } else { this.green };
+        let mut min = if this.red < this.green { this.red } else { this.green };
         min = if min < this.blue { min } else { this.blue };
 
-        max = if this.red > this.green { this.red } else { this.green };
+        let mut max = if this.red > this.green { this.red } else { this.green };
         max = if max > this.blue { max } else { this.blue };
 
         out.value = max;
-        delta = max - min;
+        let delta = max - min;
         if delta < 0.00001 {
             out.saturation = 0.0;
             out.hue = 0.0;

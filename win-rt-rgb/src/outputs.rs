@@ -2,7 +2,8 @@ use simple_error::{ SimpleError, try_with };
 use log::info;
 use std::net;
 
-use crate::device::{ RgbRenderBuffer, RenderOutput };
+use crate::common::RgbVec;
+use crate::render_service::RenderOutput;
 
 /// A network device running WLED (<https://kno.wled.ge/>).
 pub struct WledRenderOutput {
@@ -32,7 +33,7 @@ impl WledRenderOutput {
 }
 
 impl RenderOutput for WledRenderOutput {
-    fn draw(&mut self, buffer: &RgbRenderBuffer) -> Result<(), SimpleError> {
+    fn draw(&mut self, buffer: &RgbVec) -> Result<(), SimpleError> {
         assert_eq!(3*buffer.len() + 2, self.output_buffer.len());
 
         for (i, &color) in buffer.iter().enumerate() {
@@ -66,7 +67,7 @@ lazy_static::lazy_static! {
 }
 
 impl QmkRenderOutput {
-    pub fn new<'a>(size: usize, vendor_id: u16, product_id: u16) -> Result<Self, SimpleError> {
+    pub fn new(size: usize, vendor_id: u16, product_id: u16) -> Result<Self, SimpleError> {
         info!("Creating QMK output of size {} for VID({:#x}) PID({:#x})", size, vendor_id, product_id);
         let guard = API.lock().unwrap();
         let api = guard.as_ref().map_err(SimpleError::from)?;
@@ -85,7 +86,7 @@ impl QmkRenderOutput {
 }
 
 impl RenderOutput for QmkRenderOutput {
-    fn draw(&mut self, buffer: &RgbRenderBuffer) -> Result<(), SimpleError> {
+    fn draw(&mut self, buffer: &RgbVec) -> Result<(), SimpleError> {
         assert_eq!(3*buffer.len() + 3, self.output_buffer.len());
 
         for (i, &color) in buffer.iter().enumerate() {

@@ -3,17 +3,16 @@ pub mod audio;
 
 use std::marker::PhantomData;
 
-use super::RenderBuffer;
 use ::color::{RgbF32, HsvF32};
 use futures::stream::{ BoxStream, StreamExt };
 
-/// A generically-typed (i.e. boxed) stream of [RenderBuffer]s.
-pub type BufferStream<'a, T> = BoxStream<'a, RenderBuffer<T>>;
+/// A generically-typed (i.e. boxed) stream of (color) buffers
+pub type BufferStream<'a, T> = BoxStream<'a, Vec<T>>;
 type RgbBufferStream<'a> = BufferStream<'a, RgbF32>;
 type HsvBufferStream<'a> = BufferStream<'a, HsvF32>;
 
 
-/// Transforms a stream of [RenderBuffer]s.
+/// Transforms a stream of color buffers.
 ///
 /// This may be a simple mapping operation, e.g. increasing the saturation of each value in each buffer of the stream.
 ///
@@ -33,7 +32,7 @@ pub trait BufferStreamTransformation<'a, I, O> {
 fn map<'a, F, I, O>(stream: BufferStream<'a, I>, f: F) -> BufferStream<'a, O> where
         I: 'a,
         O: 'a,
-        F: FnMut(RenderBuffer<I>) -> RenderBuffer<O> + Clone + Send + 'a {
+        F: FnMut(Vec<I>) -> Vec<O> + Clone + Send + 'a {
     MapTransformation{
         f,
         i: PhantomData,
@@ -42,7 +41,7 @@ fn map<'a, F, I, O>(stream: BufferStream<'a, I>, f: F) -> BufferStream<'a, O> wh
 }
 
 /// [BufferStreamTransformation] for [map].
-struct MapTransformation<I, O, F: FnMut(RenderBuffer<I>) -> RenderBuffer<O> + Clone + Send> {
+struct MapTransformation<I, O, F: FnMut(Vec<I>) -> Vec<O> + Clone + Send> {
     f: F,
     i: PhantomData<I>,
     o: PhantomData<O>,
@@ -50,8 +49,8 @@ struct MapTransformation<I, O, F: FnMut(RenderBuffer<I>) -> RenderBuffer<O> + Cl
 impl<'a, I, O, F> BufferStreamTransformation<'a, I, O> for MapTransformation<I, O, F> where
     I: 'a,
     O: 'a,
-    F: FnMut(RenderBuffer<I>) -> RenderBuffer<O> + Clone + Send + 'a {
+    F: FnMut(Vec<I>) -> Vec<O> + Clone + Send + 'a {
     fn transform(self, input: BufferStream<'a, I>) -> BufferStream<'a, O> {
-        input.map(self.f.clone()).boxed()
+        input.map(self.f).boxed()
     }
 }

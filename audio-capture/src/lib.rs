@@ -11,15 +11,36 @@ const REFTIMES_PER_SEC: i64 = 10_000_000;
 
 type AudioCaptureResult = f32;
 
-/// Captures audio data from an output device and converts in to a stream of intensity/loudness values.
-/// TODO: this should be converted to return a future instead of a join handle if possible, but some winapi types may not be [Send].
-pub fn capture_audio_intensity(shutdown: broadcast::Receiver<()>) -> (watch::Receiver<AudioCaptureResult>, std::thread::JoinHandle<()>) {
-    let (intensity_tx, intensity_rx) = watch::channel(0.0);
-    (intensity_rx, capture_audio(30, intensity_tx, shutdown))
+/// Captures audio data from an output device and converts it to a stream of intensity/loudness values.
+///
+/// Runs until the struct is dropped or all receivers are closed.
+pub struct AudioCaptureController {
+    handle: Option<std::thread::JoinHandle<()>>,
+    shutdown: Option<oneshot::Sender<()>>,
+}
+
+impl AudioCaptureController {
+    pub fn new() -> (Self, watch::Receiver<AudioCaptureResult>) {
+        let (intensity_tx, intensity_rx) = watch::channel(0.0);
+        let (shutdown_tx, shutdown_rx) = oneshot::channel();
+        let thread_handle = capture_audio(30, intensity_tx, shutdown_rx);
+        (AudioCaptureController{
+            handle: Some(thread_handle),
+            shutdown: Some(shutdown_tx),
+        } ,intensity_rx)
+    }
+}
+
+impl Drop for AudioCaptureController {
+    fn drop(&mut self) {
+        self.shutdown.take().unwrap().send(()).unwrap();
+        self.handle.take().unwrap().join().unwrap();
+    }
 }
 
 // The actual audio listener, run in a separate thread.
-fn capture_audio(buffers_per_sec: usize, intensity_tx: watch::Sender<AudioCaptureResult>, mut shutdown: broadcast::Receiver<()>) -> std::thread::JoinHandle<()> {
+// TODO: this should be converted to return a future instead of a join handle if possible, but some winapi types may not be [Send].
+fn capture_audio(buffers_per_sec: usize, intensity_tx: watch::Sender<AudioCaptureResult>, mut shutdown: oneshot::Receiver<()>) -> std::thread::JoinHandle<()> {
     std::thread::Builder::new().name("AudioCapture".to_string()).spawn(move || {
         if let Err(e) = wasapi::initialize_sta() {
             error!("Failed to perform COM initialization: {}", e);

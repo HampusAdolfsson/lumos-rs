@@ -1,24 +1,25 @@
-#![feature(result_option_inspect)]
+#![feature(result_option_inspect, let_chains)]
 #![allow(clippy::needless_return)]
-use log::info;
+use log::{info, warn};
 use futures::StreamExt;
-use tokio_stream::wrappers::WatchStream;
 
-/// Implements all rendering logic that happens after a frame is captured.
-///
-/// * Sampling a frame into a vector of colors corresponding to some regions of the screen
-/// * Transforming the sampled colors (e.g. to perform color correction)
-/// * Outputting the colors somewhere (usually to a physical device such as a WLED device or an RGB keyboard)
-mod device;
-mod device_collection;
+mod common;
+mod render_service;
 
-/// Implementations of [device::RenderOutput]
+/// Implementations of [render_service::RenderOutput]
 mod outputs;
 mod websocket;
+mod profiles;
 
 mod config {
     pub const DESKTOP_CAPTURE_FPS: f32 = 15.0;
     pub const WEBSOCKET_PORT: u32 = 9901;
+    use crate::common::Rect;
+    pub const MONITORS: [Rect; 2] = [
+        Rect{ left: 0, top: -8, width: 2560, height: 1440 },
+        Rect{ left: 2560, top: 192, width: 1920, height: 1080 },
+    ];
+	pub const DEFAULT_CAPTURE_REGION: Rect = Rect{ left: 0, top: 840, width: 2560, height: 600 };
 }
 
 #[tokio::main]
@@ -34,30 +35,36 @@ async fn main() {
     // Used to tell all long-running tasks to exit
     let (shutdown_tx, mut shutdown_rx) = tokio::sync::broadcast::channel(1);
 
-    let (frame_rx, frame_thread) = desktop_capture::capture_desktop_frames(config::DESKTOP_CAPTURE_FPS, shutdown_tx.subscribe());
-    let (audio_rx, audio_thread) = audio_capture::capture_audio_intensity(shutdown_tx.subscribe());
-
     let (ws_task, mut ws_messages) = websocket::run_websocket_server(
         config::WEBSOCKET_PORT,
         shutdown_tx.subscribe()
     ).await.expect("Could not open websocket");
-    tokio::spawn(async move { ws_task.await });
+    tokio::spawn(ws_task);
 
-    let mut running_devices = None;
-    // The main loop handles messages from the websocket server, and the ctrl-c signal
+    let mut profile_listener = profiles::ProfileListener::new(config::MONITORS.to_vec()).await;
+
+    let mut render_service = render_service::RenderService::new(config::DEFAULT_CAPTURE_REGION, config::DESKTOP_CAPTURE_FPS);
+    // The main loop handles messages from the websocket server, the profile listener and the ctrl-c signal
     loop {
         tokio::select! {
-            received = ws_messages.next() => {
-                if let Some(msg) = received {
+            ws_msg = ws_messages.next() => {
+                if let Some(msg) = ws_msg {
                     match msg {
                         websocket::Frame::Devices(devs) => {
-                            // Kill running devices before we initialize the new ones
-                            drop(running_devices);
                             info!("Starting {} device(s)", devs.len());
-                            let devices = devs.into_iter().map(|dev| device::RenderDevice::new(dev, WatchStream::new(frame_rx.clone()), WatchStream::new(audio_rx.clone()))).collect();
-                            running_devices = Some(device_collection::DeviceCollection::new(devices));
+                            render_service.set_devices(devs);
                         },
+                        websocket::Frame::Profiles(profs) => {
+                            info!("Received {} profile(s)", profs.len());
+                            profile_listener.set_profiles(profs);
+                        }
                     };
+                }
+            },
+            profile_info = profile_listener.next() => {
+                match profile_info {
+                    Ok(profile_info) => render_service.notify_active_profile(profile_info).await,
+                    Err(e) => warn!("Profile listener got error: {}", e),
                 }
             },
             _ = tokio::signal::ctrl_c() => {
@@ -68,6 +75,4 @@ async fn main() {
         }
     }
     info!("Shutting down...");
-    frame_thread.join().unwrap();
-    audio_thread.join().unwrap();
 }

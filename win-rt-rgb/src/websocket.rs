@@ -7,13 +7,15 @@ use tokio_stream::Stream;
 use tokio_stream::wrappers::ReceiverStream;
 use std::future::Future;
 use std::net::SocketAddr;
-use simple_error::{SimpleError, SimpleResult};
+use simple_error::{SimpleError, SimpleResult, try_with};
 
-use crate::device::{DeviceSpecification, RenderOutput, SamplingType, AudioSamplingParameters, HsvAdjustment};
+use crate::render_service::{RenderOutput, specification::{DeviceSpecification, SamplingType, AudioSamplingParameters, HsvAdjustment}};
 use crate::outputs::{WledRenderOutput, QmkRenderOutput};
+use crate::profiles::{self, ApplicationProfile};
 
 pub enum Frame {
-    Devices(Vec<DeviceSpecification>)
+    Devices(Vec<DeviceSpecification>),
+    Profiles(Vec<profiles::ApplicationProfile>),
 }
 
 mod deser_types {
@@ -58,6 +60,37 @@ mod deser_types {
         pub vendor_id: u16,
         pub product_id: u16,
     }
+
+    #[derive(serde::Deserialize)]
+    pub struct ProfileMessage {
+        pub subject: String,
+        pub contents: Vec<ProfileEntry>,
+    }
+    #[derive(serde::Deserialize)]
+    pub struct ProfileEntry {
+        pub id: u32,
+        pub regex: String,
+        pub areas: Vec<AreaSpecification>,
+        pub priority: i32,
+    }
+    #[derive(serde::Deserialize)]
+    pub struct AreaSpecification {
+        pub selector: Option<MonitorDimensions>,
+        pub width: MonitorDistance,
+        pub height: MonitorDistance,
+        pub x: MonitorDistance,
+        pub y: MonitorDistance,
+    }
+    #[derive(serde::Deserialize)]
+    pub struct MonitorDimensions {
+        pub width: usize,
+        pub height: usize,
+    }
+    #[derive(serde::Deserialize)]
+    pub struct MonitorDistance {
+        pub px: Option<i32>,
+        pub percentage: Option<f32>,
+    }
 }
 
 pub async fn run_websocket_server(port: u32, mut shutdown: broadcast::Receiver<()>) -> SimpleResult<(impl Future<Output=()>, impl Stream<Item=Frame>)> {
@@ -95,11 +128,25 @@ async fn handle_connection(raw_stream: TcpStream, frame_tx: mpsc::Sender<Frame>,
     ws_stream.try_for_each(|raw_msg| async {
         let str_msg = raw_msg.into_text().unwrap();
         if let Ok(msg) = serde_json::from_str::<deser_types::Message>(&str_msg) {
+            debug!("Received '{}' message from {}", msg.subject, client_addr);
             let frame = match msg.subject.as_str() {
                 "devices" => {
-                    debug!("Received devices message from {}", client_addr);
-                    let device_msg: deser_types::DeviceMessage = serde_json::from_str(&str_msg).unwrap();
-                    Some(handle_device_message(device_msg))
+                    match serde_json::from_str::<deser_types::DeviceMessage>(&str_msg) {
+                        Ok(device_msg) => Some(handle_device_message(device_msg)),
+                        Err(e) => {
+                            warn!("Failed to parse message: {}", e);
+                            None
+                        },
+                    }
+                },
+                "profiles" => {
+                    match serde_json::from_str::<deser_types::ProfileMessage>(&str_msg) {
+                        Ok(profile_msg) => Some(handle_profile_message(profile_msg)),
+                        Err(e) => {
+                            warn!("Failed to parse message: {}", e);
+                            None
+                        },
+                    }
                 },
                 _ => {
                     warn!("Received unknown message subject '{}'", &msg.subject);
@@ -165,4 +212,53 @@ fn handle_device_message(msg: deser_types::DeviceMessage) -> Frame {
     }
 
     Frame::Devices(device_specs)
+}
+
+fn handle_profile_message(msg: deser_types::ProfileMessage) -> Frame {
+    let mut new_profiles = Vec::new();
+    for profile_raw in msg.contents {
+        let profile = parse_profile(&profile_raw);
+        match profile {
+            Ok(profile) => new_profiles.push(profile),
+            Err(e) => warn!("Skipping profile '{}': {}", profile_raw.regex, e),
+        }
+
+    };
+    Frame::Profiles(new_profiles)
+}
+
+fn parse_profile(profile_raw: &deser_types::ProfileEntry) -> SimpleResult<ApplicationProfile> {
+    let regex = try_with!(regex::Regex::new(&profile_raw.regex), "Invalid title regex");
+    let mut areas = Vec::new();
+    for area_raw in &profile_raw.areas {
+        let resolution = area_raw.selector.as_ref().map(|dim| (dim.width, dim.height));
+        areas.push(profiles::MonitorAreaSpecification{
+            resolution,
+            left: parse_monitor_distance(&area_raw.x)?,
+            top: parse_monitor_distance(&area_raw.y)?,
+            width: parse_monitor_distance(&area_raw.width)?,
+            height: parse_monitor_distance(&area_raw.height)?,
+        })
+    }
+    Ok(profiles::ApplicationProfile{
+        id: profile_raw.id,
+        priority: profile_raw.priority,
+        title_regex: regex,
+        areas,
+    })
+}
+
+fn parse_monitor_distance(distance_raw: &deser_types::MonitorDistance) -> SimpleResult<profiles::MonitorDistance> {
+    if distance_raw.px.is_none() && distance_raw.percentage.is_none() {
+        return Err(SimpleError::new("Area must specify either px or percentage"));
+    }
+    if let Some(px) = distance_raw.px {
+        Ok(profiles::MonitorDistance::Pixels(px as isize))
+    } else {
+        let percentage = distance_raw.percentage.unwrap() / 100.0;
+        if !(0.0..=1.0).contains(&percentage) {
+            return Err(SimpleError::new(format!("Area percentage must be in [0.0, 1.0], was {}", percentage)));
+        }
+        Ok(profiles::MonitorDistance::Proportion(percentage))
+    }
 }

@@ -2,19 +2,19 @@ use core::task::{Poll, Context};
 
 use color::HsvF32;
 use futures::stream::{BoxStream, StreamExt, Stream};
-use crate::device::HsvRenderBuffer;
+use crate::common::HsvVec;
 
 use super::HsvBufferStream;
 
-/// A [super::BufferStreamTransformation] which takes a stream of [super::RenderBuffer]s and a stream of
+/// A [super::BufferStreamTransformation] which takes a stream of [HsvVec]s and a stream of
 /// audio intensity or "loudness" values (captured from the OS), and continously applies the
-/// audio intensity values to the brightness of the [RenderBuffer]s (multiplicatively). This makes the
+/// audio intensity values to the value channels of the [HsvVec]s (multiplicatively). This makes the
 /// output "flash" in sync with the sound playing.
 ///
-/// Output is produced when receiving **audio** values, not when receiving [RenderBuffer]s.
+/// Output is produced when receiving **audio** values, not when receiving [HsvVec]s.
 /// Thus, it is important that the audio stream produces values at a steady and high-enough rate.
 pub struct AudioIntensityTransformation<'a> {
-    /// The stream of intensity values to apply to received [RenderBuffer]s.
+    /// The stream of intensity values to apply to received [HsvVec]s.
     /// The values should fit in a [0.0, 1.0] range.
     pub audio: BoxStream<'a, f32>,
     /// How much the audio intensity affects the brightness of output colors.
@@ -45,13 +45,13 @@ struct AudioIntensityCombiner<'a> {
     /// The last color buffer we're received.
     ///
     /// When we receive an audio intensity value, it is applied to this buffer and the result is sent as output.
-    last_buffer: Option<HsvRenderBuffer>,
+    last_buffer: Option<HsvVec>,
     /// See [AudioIntensityTransformation::amount].
     amount: f32,
 }
 
 impl<'a> Stream for AudioIntensityCombiner<'a> {
-    type Item = HsvRenderBuffer;
+    type Item = HsvVec;
 
     fn poll_next(mut self: core::pin::Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         if self.audio.is_some() {
@@ -59,7 +59,7 @@ impl<'a> Stream for AudioIntensityCombiner<'a> {
             if let Poll::Ready(buffer) = self.buffers.poll_next_unpin(cx) {
                 match buffer {
                     Some(buf) => {
-                        self.last_buffer = Some(buf.clone());
+                        self.last_buffer = Some(buf);
                     },
                     // Close this stream if the buffer stream closes
                     None => return Poll::Ready(None),

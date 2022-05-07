@@ -1,20 +1,19 @@
 
-mod specification;
-mod frame_sampler;
+pub mod specification;
 mod transformations;
+pub mod frame_sampler;
 
 use log::debug;
-pub use specification::*;
 
+use tokio::sync::watch;
 use transformations::BufferStreamTransformation;
 use futures::stream::{ Stream, BoxStream, StreamExt };
 use simple_error::SimpleError;
 
-use crate::device::transformations::color::{to_hsv, to_rgb};
+use crate::common::RgbVec;
+use transformations::color::{to_hsv, to_rgb};
 
-pub type RenderBuffer<T> = Vec::<T>;
-pub type RgbRenderBuffer = RenderBuffer::<color::RgbF32>;
-pub type HsvRenderBuffer = RenderBuffer::<color::HsvF32>;
+use self::frame_sampler::FrameSampler;
 
 /// A device for which to sample [desktop_capture::Frame]s and render color values.
 /// This struct can be used to drive the entire process of sampling, transforming and drawing to a device.
@@ -22,34 +21,35 @@ pub type HsvRenderBuffer = RenderBuffer::<color::HsvF32>;
 /// `T` is the physical device to draw to, see [RenderOutput].
 pub struct RenderDevice<'a> {
     output: Box<dyn RenderOutput + Send>,
-    stream: BoxStream<'a, RgbRenderBuffer>
+    stream: BoxStream<'a, RgbVec>
 }
 
-/// An output sink for color values (i.e. [RenderBuffer]s).
+/// An output sink for color values (i.e. [RgbVec]s).
 ///
 /// Typically this represents a physical device, e.g. a WLED device with an LED strip, or an RGB keyboard.
 pub trait RenderOutput {
-    fn draw(&mut self, buffer: &RgbRenderBuffer) -> Result<(), SimpleError>;
+    fn draw(&mut self, buffer: &RgbVec) -> Result<(), SimpleError>;
     fn size(&self) -> usize;
 }
 
 
 impl<'a> RenderDevice<'a> {
-    /// Creates a new device from the given [DeviceSpecification].
+    /// Creates a new device from the given [specification::DeviceSpecification].
     ///
     /// When the device is run, it will process frames from the provided stream.
-    pub fn new<U, V>(spec: DeviceSpecification, frames: U, audio: V) -> Self where
+    pub fn new<U, V, S, P>(spec: specification::DeviceSpecification, frames: U, audio: V, mut sampler: S, mut params: watch::Receiver<P>) -> Self where
         U: Stream<Item = desktop_capture::Frame> + std::marker::Send + 'a,
         V: Stream<Item = f32> + std::marker::Send + 'a,
+        S: FrameSampler<P> + std::marker::Sync + 'a,
+        P: Clone + Sync + Send + 'a,
     {
-        use frame_sampler::{ FrameSampler, HorizontalFrameSampler, VerticalFrameSampler };
-
-        let mut sampler: Box<dyn FrameSampler> = match spec.sampling_type {
-            SamplingType::Horizontal => Box::new(HorizontalFrameSampler::new(spec.output.size())),
-            SamplingType::Vertical => Box::new(VerticalFrameSampler::new(spec.output.size())),
-            _ => panic!("Not implemented"),
-        };
-        let mut stream = frames.boxed().map(move |frame| sampler.sample(&frame)).boxed();
+        // Create a stream of sampled colors
+        let mut stream = frames.boxed().map(move |frame| {
+            if let Ok(changed) = params.has_changed() && changed {
+                sampler.set_params(params.borrow_and_update().clone());
+            }
+            sampler.sample(&frame)
+        }).boxed();
 
         // Transform the stream according to the specification
         {
