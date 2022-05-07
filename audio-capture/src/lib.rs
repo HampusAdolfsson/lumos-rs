@@ -1,7 +1,8 @@
+#![allow(clippy::excessive_precision)]
 use byteorder::{NativeEndian, ByteOrder};
 use log::{debug, error, info};
 use wasapi::{Direction, ShareMode, SampleType};
-use tokio::sync::{watch, broadcast};
+use tokio::sync::{watch, oneshot};
 
 mod audio_sink;
 mod wave_to_intensity;
@@ -48,7 +49,7 @@ fn capture_audio(buffers_per_sec: usize, intensity_tx: watch::Sender<AudioCaptur
         }
 
         let device = wasapi::get_default_device(&Direction::Render).unwrap();
-        info!("Opened default playback device: {}", device.get_friendlyname().unwrap_or("unknown".to_string()));
+        info!("Opened default playback device: {}", device.get_friendlyname().unwrap_or_else(|_| "unknown".to_string()));
 
         let mut audio_client = device.get_iaudioclient().unwrap();
 
@@ -79,16 +80,13 @@ fn capture_audio(buffers_per_sec: usize, intensity_tx: watch::Sender<AudioCaptur
         loop {
             let res = capture_client.read_from_device(blockalign as usize, &mut raw_buffer).unwrap();
             {
-                if res.1.silent {
-                    debug!("Got silence: ({} frames).", res.0);
-                }
                 let float_slice = &mut float_buffer[0..(res.0 as usize * format.get_nchannels() as usize)];
                 NativeEndian::read_f32_into(&raw_buffer[0..(float_slice.len() * std::mem::size_of::<f32>())], float_slice);
                 let res = sink.receive_samples(float_slice.as_ref());
                 if let Some(val) = res {
                     // Send value to all streams, and remove any streams that have been closed on the other end
                     let intensity =  converter.get_intensity(val);
-                    if let Err(_) = intensity_tx.send(intensity) {
+                    if intensity_tx.send(intensity).is_err() {
                         // All receivers have closed, no point in running any longer
                         break;
                     }
@@ -97,10 +95,12 @@ fn capture_audio(buffers_per_sec: usize, intensity_tx: watch::Sender<AudioCaptur
             if let Ok(()) = shutdown.try_recv() {
                 break;
             }
-            if h_event.wait_for_event(3000).is_err() {
-                error!("Timeout error, stopping capture");
-                audio_client.stop_stream().unwrap();
-                break;
+            if h_event.wait_for_event(100).is_err() {
+                // No audio is playing, act as if we're receiving silence
+                if intensity_tx.send(0.0).is_err() {
+                    // All receivers have closed, no point in running any longer
+                    break;
+                }
             }
         }
         debug!("Audio generator stopped");

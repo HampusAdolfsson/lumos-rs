@@ -90,7 +90,7 @@ impl WaveToIntensityConverter {
         self.output_filter.put(intensity);
         intensity = self.output_filter.output();
 
-        return intensity.clamp(0.0, 1.0);
+        intensity.clamp(0.0, 1.0)
     }
 }
 
