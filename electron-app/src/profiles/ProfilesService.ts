@@ -5,8 +5,8 @@ import Path from 'path';
 import { readFileSync, existsSync, mkdirSync, writeFileSync } from 'fs';
 
 export class ProfilesService {
-  private static readonly profilesSaveFile = Path.join(process.env.APPDATA || ".", "win-rt-rgb", "profiles.json");
-  private static readonly idSaveFile = Path.join(process.env.APPDATA || ".", "win-rt-rgb", "profiles_id.json");
+  private static readonly profilesSaveFile = Path.join(process.env.APPDATA || ".", "win-rt-rgb", "profiles2.json");
+  private static readonly idSaveFile = Path.join(process.env.APPDATA || ".", "win-rt-rgb", "profiles_id2.json");
 
   public static get Instance() {
     if (!this.instance) {
@@ -16,10 +16,20 @@ export class ProfilesService {
   }
 
   public static LoadAndInstantiate() {
-    let profiles = [];
+    let profiles: IProfileCategory[] = [];
     let nextId = 0;
     if (existsSync(this.profilesSaveFile)) {
       profiles = JSON.parse(readFileSync(this.profilesSaveFile).toString());
+      profiles.forEach(cat => {
+        cat.profiles.forEach(prof => {
+          prof.areas.forEach(area => {
+            // @ts-ignore
+            if (area.selector === "*") {
+              area.selector = undefined;
+            }
+          });
+        });
+      });
     }
     if (existsSync(this.idSaveFile)) {
       nextId = JSON.parse(readFileSync(this.idSaveFile).toString()).nextId;
@@ -63,14 +73,17 @@ export class ProfilesService {
   }
 
   public createProfile(): IProfile {
-    const profile = {
+    const profile: IProfile = {
       id: this.nextId,
       regex: '',
-      area: {
-        x: 0, y: 0,
-        width: 1920, height: 1080,
-      },
       priority: undefined,
+      areas: [{
+        selector: undefined,
+        x: { px: 0 },
+        y: { px: 0 },
+        width: { percentage: 100 },
+        height: { percentage: 100 },
+      }]
     };
     this.nextId += 1;
 
@@ -88,7 +101,6 @@ export class ProfilesService {
       });
       return profiles;
     });
-    console.log(flattenedProfiles);
     WebsocketService.Instance.sendMessage('profiles', flattenedProfiles);
   }
 

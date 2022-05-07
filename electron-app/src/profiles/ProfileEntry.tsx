@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { makeStyles, createStyles, Theme, TableCell, IconButton, Typography } from '@material-ui/core';
-import CheckCircleIcon from '@material-ui/icons/CheckCircle';
-import { IProfile } from './Profile';
+import { IAreaSpecification, IProfile, MonitorDistance } from './Profile';
 import { Delete, Settings } from '@material-ui/icons';
 import { ProfileSettings } from './ProfileSettings';
 
@@ -39,7 +38,7 @@ export function ProfileEntry(props: Props) {
         {props.profile.regex || "New Profile"}
       </TableCell>
       <TableCell>
-        {props.profile.area.width}x{props.profile.area.height}
+        {props.profile.areas.map(areaSize).join(", ")}
       </TableCell>
       <TableCell align="right" >
         <IconButton onClick={() => {setDialogOpen(true);}}>
@@ -54,4 +53,16 @@ export function ProfileEntry(props: Props) {
         profile={props.profile}/>
     </>
   );
+}
+
+function areaSize(area: IAreaSpecification) {
+  const distToStr = (dist: MonitorDistance) => {
+    if ("px" in dist) {
+      return dist.px.toString();
+    } else {
+      return dist.percentage + "%";
+    }
+  }
+
+  return distToStr(area.width) + "x" + distToStr(area.height);
 }

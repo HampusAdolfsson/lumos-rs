@@ -1,16 +1,23 @@
 'use strict';
 
-export interface IRect {
-    width: number;
-    height: number;
-    x: number;
-    y: number;
+// export interface IMonitorDistance {
+
+// }
+
+export type MonitorDistance = { px: number } | { percentage: number };
+
+export interface IAreaSpecification {
+    selector: undefined | { width: number, height: number };
+    width: MonitorDistance;
+    height: MonitorDistance;
+    x: MonitorDistance;
+    y: MonitorDistance;
 }
 
 export interface IProfile {
     id: number;
     regex: string;
-    area: IRect;
+    areas: IAreaSpecification[];
     priority: number | undefined;
 }
 
