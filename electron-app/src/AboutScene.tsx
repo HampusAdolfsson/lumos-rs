@@ -37,7 +37,7 @@ export function AboutScene() {
   return (
     <div className={classes.aboutScene}>
       <p>Created by <strong>Hampus Adolfsson</strong>.</p>
-      <p>Check out this project on <a href="https://github.com/HampusAdolfsson/win-rt-rgb">GitHub</a>!</p>
+      <p>Check out this project on <a href="https://github.com/HampusAdolfsson/lumos-rs">GitHub</a>!</p>
       <TextField className={classes.logView}
         value={logMsgs}
         variant="outlined"

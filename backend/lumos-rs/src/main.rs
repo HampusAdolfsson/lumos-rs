@@ -28,7 +28,7 @@ async fn main() {
         simplelog::LevelFilter::Debug,
         simplelog::Config::default(),
         simplelog::TerminalMode::Stdout,
-        simplelog::ColorChoice::Always
+        simplelog::ColorChoice::Never
     ).unwrap();
     info!("Starting application");
 

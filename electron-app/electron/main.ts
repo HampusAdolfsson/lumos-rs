@@ -10,11 +10,11 @@ let isQuitting = false;
 let backendProcess: ChildProcess | undefined;
 let backendProcessOutput: string = "";
 
-app.setName('win-rt-rgb');
+app.setName('lumos-rs');
 
 function createWindow() {
   mainWindow = new BrowserWindow({
-    title: 'win-rt-rgb',
+    title: 'lumos-rs',
     width: 1000,
     height: 1000,
     backgroundColor: '#202020',
@@ -44,7 +44,10 @@ function createWindow() {
 
 app.whenReady().then(() => {
   if (process.env.NODE_ENV !== 'development') {
-    backendProcess = spawn(path.join(__dirname, 'assets/backend/win-rt-rgb.exe'));
+    mainWindow?.webContents.send('log', __dirname)
+    mainWindow?.webContents.send('log', path.join(__dirname, '../../assets/backend/lumos-rs.exe'))
+    backendProcessOutput += __dirname;
+    backendProcess = spawn(path.join(__dirname, '../../assets/backend/lumos-rs.exe'), { env: {NO_COLORS: "true", term: "DUMB"}});
   }
   backendProcess?.on('exit', code => {
     backendProcessOutput += `Backend process exited with code ${code}.`;

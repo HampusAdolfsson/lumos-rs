@@ -10,7 +10,7 @@ export interface IExtendedDeviceSpecification {
 }
 
 export class DevicesService {
-  private static readonly saveFile = Path.join(process.env.APPDATA || ".", "win-rt-rgb", "devices2.json");
+  private static readonly saveFile = Path.join(process.env.APPDATA || ".", "lumos-rs", "devices.json");
 
   public static get Instance() {
     if (!this.instance) {

@@ -49,7 +49,7 @@ module.exports = {
   },
   plugins: [
     new HtmlWebpackPlugin({
-      title: 'win-rt-rgb'
+      title: 'lumos-rs'
     })
   ]
 }

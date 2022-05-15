@@ -1,5 +1,5 @@
 {
-  "name": "win-rt-rgb",
+  "name": "lumos-rs",
   "version": "1.0.0",
   "description": "",
   "main": "./dist/main.js",
@@ -59,9 +59,9 @@
     "styled-components": "^5.1.1"
   },
   "build": {
-    "appId": "win-rt-rgb",
+    "appId": "lumos-rs",
     "win": {
-      "asar": false,
+      "asar": true,
       "asarUnpack": "assets/**"
     },
     "mac": {
@@ -70,6 +70,9 @@
     "directories": {
       "output": "packages"
     },
+    "extraResources": [
+      "assets/backend"
+    ],
     "files": [
       "package.json",
       "dist/**",

@@ -5,8 +5,8 @@ import Path from 'path';
 import { readFileSync, existsSync, mkdirSync, writeFileSync } from 'fs';
 
 export class ProfilesService {
-  private static readonly profilesSaveFile = Path.join(process.env.APPDATA || ".", "win-rt-rgb", "profiles2.json");
-  private static readonly idSaveFile = Path.join(process.env.APPDATA || ".", "win-rt-rgb", "profiles_id2.json");
+  private static readonly profilesSaveFile = Path.join(process.env.APPDATA || ".", "lumos-rs", "profiles.json");
+  private static readonly idSaveFile = Path.join(process.env.APPDATA || ".", "lumos-rs", "profiles_id.json");
 
   public static get Instance() {
     if (!this.instance) {

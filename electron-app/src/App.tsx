@@ -77,7 +77,7 @@ class App extends React.Component<{}, State> {
         <ThemeProvider theme={theme} >
           <CssBaseline />
           <AppBar position="sticky" color="default">
-            <Typography variant="h4" color="textSecondary" style={{position: "fixed", top: 15, left: 20 }}>win-rt-rgb</Typography>
+            <Typography variant="h4" color="textSecondary" style={{position: "fixed", top: 15, left: 20 }}>lumos-rs</Typography>
             <Tabs value={value} onChange={(_, val) => { this.setState({tabValue: val}); }} centered
                   indicatorColor="primary"
                   textColor="primary" >
