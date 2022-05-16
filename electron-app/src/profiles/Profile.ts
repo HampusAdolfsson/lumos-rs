@@ -1,13 +1,10 @@
 'use strict';
 
-// export interface IMonitorDistance {
-
-// }
-
 export type MonitorDistance = { px: number } | { percentage: number };
 
 export interface IAreaSpecification {
     selector: undefined | { width: number, height: number };
+    direction: "both" | "horizontal" | "vertical";
     width: MonitorDistance;
     height: MonitorDistance;
     x: MonitorDistance;

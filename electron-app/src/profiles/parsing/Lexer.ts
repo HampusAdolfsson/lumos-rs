@@ -8,6 +8,8 @@ export enum TokenType {
     DecimalPoint = ".",
     PercentageSign = "%",
     Wildcard = "*",
+    Pipe = "|",
+    Hyphen = "-",
     Literal = "Identifier",
     Integer = "Number",
     Unknown = "Unknown",
@@ -29,6 +31,8 @@ export type Token =
   TokenNode<TokenType.DecimalPoint> |
   TokenNode<TokenType.PercentageSign> |
   TokenNode<TokenType.Wildcard> |
+  TokenNode<TokenType.Pipe> |
+  TokenNode<TokenType.Hyphen> |
   TokenValueNode<TokenType.Literal> |
   TokenValueNode<TokenType.Integer> |
   TokenValueNode<TokenType.Unknown>;
@@ -41,6 +45,8 @@ const tokenMap: Array<{ key: string, token: Token }> = [
     { key: TokenType.DecimalPoint, token: { type: TokenType.DecimalPoint } },
     { key: TokenType.PercentageSign, token: { type: TokenType.PercentageSign } },
     { key: TokenType.Wildcard, token: { type: TokenType.Wildcard } },
+    { key: TokenType.Pipe, token: { type: TokenType.Pipe } },
+    { key: TokenType.Hyphen, token: { type: TokenType.Hyphen } },
 ];
 
 export interface Location {

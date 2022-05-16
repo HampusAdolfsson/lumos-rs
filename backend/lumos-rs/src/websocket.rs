@@ -16,6 +16,7 @@ use crate::profiles::{self, ApplicationProfile};
 pub enum Frame {
     Devices(Vec<DeviceSpecification>),
     Profiles(Vec<profiles::ApplicationProfile>),
+    Shutdown,
 }
 
 mod deser_types {
@@ -39,6 +40,7 @@ mod deser_types {
     pub struct DeviceSpec {
         pub name: String,
         pub number_of_leds: u32,
+        pub sampling_type: u32,
         pub gamma: f32,
         pub color_temp: u32,
         pub saturation_adjustment: u32,
@@ -76,6 +78,7 @@ mod deser_types {
     #[derive(serde::Deserialize)]
     pub struct AreaSpecification {
         pub selector: Option<MonitorDimensions>,
+        pub direction: String,
         pub width: MonitorDistance,
         pub height: MonitorDistance,
         pub x: MonitorDistance,
@@ -148,6 +151,9 @@ async fn handle_connection(raw_stream: TcpStream, frame_tx: mpsc::Sender<Frame>,
                         },
                     }
                 },
+                "shutdown" => {
+                    Some(Frame::Shutdown)
+                }
                 _ => {
                     warn!("Received unknown message subject '{}'", &msg.subject);
                     None
@@ -173,45 +179,54 @@ fn handle_device_message(msg: deser_types::DeviceMessage) -> Frame {
     let enabled = msg.contents.into_iter().filter(|dev| dev.enabled);
     let mut device_specs = Vec::new();
     for (i, entry) in enabled.into_iter().enumerate() {
-        let output: SimpleResult<Box<dyn RenderOutput + Send>> = match &entry.device.variant {
-            0 => {
-                match entry.device.wled_data {
-                    Some(wled_params) => WledRenderOutput::new(
-                        entry.device.number_of_leds as usize,
-                        wled_params.ip_address.clone(),
-                        21324
-                    ).map(|out| -> Box<dyn RenderOutput + Send> { Box::new(out) }),
-                    None => Err(SimpleError::new("Expected WLED parameters, but none were supplied")),
-                }
-            },
-            1 => {
-                match entry.device.qmk_data {
-                    Some(qmk_params) => QmkRenderOutput::new(
-                        entry.device.number_of_leds as usize,
-                        qmk_params.vendor_id,
-                        qmk_params.product_id
-                    ).map(|out| -> Box<dyn RenderOutput + Send> { Box::new(out) }),
-                    None => Err(SimpleError::new("Expected WLED parameters, but none were supplied")),
-                }
-            },
-            v => Err(SimpleError::new(format!("Unsupported device variant {}", v))),
-        };
-        match output {
-            Ok(out) => device_specs.push(DeviceSpecification {
-                    output: out,
-                    sampling_type: SamplingType::Horizontal,
-                    hsv_adjustments: Some(HsvAdjustment{ hue: 0.0, value: entry.device.value_adjustment as f32 / 100.0, saturation: entry.device.saturation_adjustment as f32 / 100.0}),
-                    smoothing: None,
-                    audio_sampling: if entry.device.audio_amount > 0.0 { Some(AudioSamplingParameters{ amount: entry.device.audio_amount / 100.0 }) } else { None },
-                    gamma: entry.device.gamma,
-                }),
+        match parse_device(entry.device) {
+            Ok(device_spec) => device_specs.push(device_spec),
             Err(e) => {
-                warn!("Skipping device with index {}: {}", i, e)
+                warn!("Skipping device with index {}: {}", i, e);
             }
         };
     }
 
     Frame::Devices(device_specs)
+}
+
+fn parse_device(device_raw: deser_types::DeviceSpec) -> SimpleResult<DeviceSpecification> {
+    let output: Box<dyn RenderOutput + Send> = match &device_raw.variant {
+        0 => {
+            match &device_raw.wled_data {
+                Some(wled_params) => WledRenderOutput::new(
+                    device_raw.number_of_leds as usize,
+                    wled_params.ip_address.clone(),
+                    21324
+                ).map(|out| -> Box<dyn RenderOutput + Send> { Box::new(out) })?,
+                None => return Err(SimpleError::new("Expected WLED parameters, but none were supplied")),
+            }
+        },
+        1 => {
+            match &device_raw.qmk_data {
+                Some(qmk_params) => QmkRenderOutput::new(
+                    device_raw.number_of_leds as usize,
+                    qmk_params.vendor_id,
+                    qmk_params.product_id
+                ).map(|out| -> Box<dyn RenderOutput + Send> { Box::new(out) })?,
+                None => return Err(SimpleError::new("Expected WLED parameters, but none were supplied")),
+            }
+        },
+        v => return Err(SimpleError::new(format!("Unsupported device variant {}", v))),
+    };
+    let sampling_type = match &device_raw.sampling_type {
+        0 => SamplingType::Horizontal,
+        1 => SamplingType::Vertical,
+        t => return Err(SimpleError::new(format!("Unsuppored sampling type {}", t)))
+    };
+    Ok(DeviceSpecification {
+        output,
+        sampling_type,
+        hsv_adjustments: Some(HsvAdjustment{ hue: 0.0, value: device_raw.value_adjustment as f32 / 100.0, saturation: device_raw.saturation_adjustment as f32 / 100.0}),
+        smoothing: None,
+        audio_sampling: if device_raw.audio_amount > 0.0 { Some(AudioSamplingParameters{ amount: device_raw.audio_amount / 100.0 }) } else { None },
+        gamma: device_raw.gamma,
+    })
 }
 
 fn handle_profile_message(msg: deser_types::ProfileMessage) -> Frame {
@@ -234,6 +249,8 @@ fn parse_profile(profile_raw: &deser_types::ProfileEntry) -> SimpleResult<Applic
         let resolution = area_raw.selector.as_ref().map(|dim| (dim.width, dim.height));
         areas.push(profiles::MonitorAreaSpecification{
             resolution,
+            is_horizontal: area_raw.direction.eq("both") || area_raw.direction.eq("horizontal"),
+            is_vertical: area_raw.direction.eq("both") || area_raw.direction.eq("vertical"),
             left: parse_monitor_distance(&area_raw.x)?,
             top: parse_monitor_distance(&area_raw.y)?,
             width: parse_monitor_distance(&area_raw.width)?,

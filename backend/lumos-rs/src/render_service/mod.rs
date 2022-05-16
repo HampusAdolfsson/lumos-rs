@@ -32,11 +32,12 @@ pub struct RenderService {
     audio_stream: watch::Receiver<f32>,
 
     active_profiles: ProfilesState,
-    default_capture_region: Rect,
+    default_capture_region_horizontal: Rect,
+    default_capture_region_vertical: Rect,
 }
 
 impl RenderService {
-    pub fn new(default_capture_region: Rect, desktop_capture_fps: f32) -> Self {
+    pub fn new(desktop_capture_fps: f32, default_capture_region_hor: Rect, default_capture_region_ver: Rect) -> Self {
         let (frame_capturer, frame_rx) = desktop_capture::DesktopCaptureController::new(desktop_capture_fps);
         let (audio_capturer, audio_rx) = audio_capture::AudioCaptureController::new();
         RenderService{
@@ -46,7 +47,8 @@ impl RenderService {
             audio_capturer,
             audio_stream: audio_rx,
             active_profiles: ProfilesState { active: HashMap::new() },
-            default_capture_region,
+            default_capture_region_horizontal: default_capture_region_hor,
+            default_capture_region_vertical: default_capture_region_ver,
         }
     }
 
@@ -61,11 +63,16 @@ impl RenderService {
             if let Some((monitor_index, profile)) = self.active_profiles.get_highest_priority_profile() {
                 log::info!("Activating profile {} on monitor {}", profile.profile.title_regex.as_str(), monitor_index);
                 self.frame_capturer.set_capture_monitor(*monitor_index).await;
-                log::debug!("Setting sampling region: {:?}", profile.actual_region);
-                device_group.set_horizontal_region(profile.actual_region);
+                if let Some(region) = profile.actual_horizontal_region {
+                    device_group.set_horizontal_region(region);
+                }
+                if let Some(region) = profile.actual_vertical_region {
+                    device_group.set_vertical_region(region);
+                }
             } else {
                 self.frame_capturer.set_capture_monitor(0).await;
-                device_group.set_horizontal_region(self.default_capture_region);
+                device_group.set_horizontal_region(self.default_capture_region_horizontal);
+                device_group.set_vertical_region(self.default_capture_region_vertical);
             }
         }
     }

@@ -20,6 +20,10 @@ pub enum MonitorDistance {
 #[derive(Debug, Clone, Copy)]
 pub struct MonitorAreaSpecification {
     pub resolution: Option<(usize, usize)>,
+    /// Whether this area can be used for [crate::render_service::specification::SamplingType::Horizontal]
+    pub is_horizontal: bool,
+    /// Whether this area can be used for [crate::render_service::specification::SamplingType::Vertical]
+    pub is_vertical: bool,
     pub left: MonitorDistance,
     pub top: MonitorDistance,
     pub width: MonitorDistance,
@@ -57,10 +61,14 @@ pub struct ActiveProfileInfo {
 pub struct ActiveProfile {
     /// The profile that is active.
     pub profile: ApplicationProfile,
-    /// The sampling region that should be used for the monitor where this profile is active. Calculated from the
-    /// [ApplicationProfile::areas] of the profile and the resolution of the monitor.
-    pub actual_region: Rect,
+    /// The sampling region that should be used for horizontal samplers for the monitor where this profile is active.
+    /// Calculated from the [ApplicationProfile::areas] of the profile and the resolution of the monitor.
+    pub actual_horizontal_region: Option<Rect>,
+    /// The sampling region that should be used for vertical samplers for the monitor where this profile is active.
+    /// Calculated from the [ApplicationProfile::areas] of the profile and the resolution of the monitor.
+    pub actual_vertical_region: Option<Rect>,
 }
+
 
 pub use listener::*;
 mod listener {
@@ -98,17 +106,16 @@ mod listener {
                 let monitor = self.monitors[monitor_index as usize];
                 (monitor.width, monitor.height)
             };
-            // Find any profile that has a capture region for this resolution, and matches the window title.
             let matched_profile = self.profiles
                 .iter()
-                .filter(|prof| prof.match_area(monitor_dimensions).is_some())
                 .find(|prof| prof.title_regex.is_match(&title))
                 .map(ApplicationProfile::clone);
 
             let profile_with_region = matched_profile.map(|profile| {
                 ActiveProfile {
-                    // Give the real region in pixels to capture from.
-                    actual_region: profile.match_area(monitor_dimensions).unwrap().to_pixels(monitor_dimensions),
+                    // Give the real regions in pixels to capture from.
+                    actual_horizontal_region: profile.match_area_horizontal(monitor_dimensions).map(|area| area.to_pixels(monitor_dimensions)),
+                    actual_vertical_region: profile.match_area_vertical(monitor_dimensions).map(|area| area.to_pixels(monitor_dimensions)),
                     profile,
                 }
             });
@@ -141,10 +148,20 @@ impl MonitorAreaSpecification {
 }
 
 impl ApplicationProfile {
-    /// Finds the capture area specification in this profile that matches the given `monitor_dimensions` if any.
-    pub fn match_area(&self, monitor_dimensions: (usize, usize)) -> Option<MonitorAreaSpecification> {
+    /// Finds the horizontal capture area specification in this profile that matches the given `monitor_dimensions` if any.
+    pub fn match_area_horizontal(&self, monitor_dimensions: (usize, usize)) -> Option<MonitorAreaSpecification> {
+        Self::match_area(self.areas.iter().filter(|area| area.is_horizontal), monitor_dimensions)
+    }
+    /// Finds the vertical capture area specification in this profile that matches the given `monitor_dimensions` if any.
+    pub fn match_area_vertical(&self, monitor_dimensions: (usize, usize)) -> Option<MonitorAreaSpecification> {
+        Self::match_area(self.areas.iter().filter(|area| area.is_vertical), monitor_dimensions)
+    }
+    fn match_area<'a, I>(areas: I, monitor_dimensions: (usize, usize), ) -> Option<MonitorAreaSpecification>
+    where
+        I: Iterator<Item=&'a MonitorAreaSpecification>
+    {
         let mut universal_area = None;
-        for area in &self.areas {
+        for area in areas {
             if let Some(resolution) = area.resolution && resolution == monitor_dimensions {
                 return Some(*area);
             } else if area.resolution.is_none() {

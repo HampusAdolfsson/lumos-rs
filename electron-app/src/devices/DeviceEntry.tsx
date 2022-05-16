@@ -1,8 +1,8 @@
 import { Button, createStyles, Dialog, DialogActions, DialogContent, DialogTitle, Icon, IconButton, Link, makeStyles, Switch, TableCell, Theme, Typography } from '@material-ui/core';
-import { Delete, PowerSettingsNew, Settings, WbIncandescent } from '@material-ui/icons';
+import { Delete, PanoramaHorizontal, PanoramaVertical, PowerSettingsNew, Settings, WbIncandescent } from '@material-ui/icons';
 import React, { useEffect, useState } from 'react';
 import { DeviceSettings } from './DeviceSettings';
-import { IDeviceSpecification, DeviceTypes } from './DeviceSpecification';
+import { IDeviceSpecification, DeviceTypes, SamplingTypes } from './DeviceSpecification';
 
 const useStyles = makeStyles((theme: Theme) =>
   createStyles({
@@ -56,8 +56,8 @@ export function DeviceEntry(props: Props) {
               <Switch checked={enabled} onChange={(_, v) => { setEnabled(v); props.onDeviceEnabledChanged(v); }}/>
               <Typography variant="subtitle1" display="inline">{props.device.name}</Typography>
             </TableCell>
-            <TableCell align="right" >{props.device.numberOfLeds} LEDs</TableCell>
-            <TableCell align="right" >
+            <TableCell align="right">{props.device.numberOfLeds} LEDs</TableCell>
+            <TableCell align="right">
               {props.device.type == 0 ?
                 <>WLED - <Link target="_blank" href={"http://"+props.device.wledData?.ipAddress}>{props.device.wledData?.ipAddress}</Link></> :
                 <>Qmk - {truncate(`${props.device.qmkData?.productId.toString(16).toUpperCase()}/${props.device.qmkData?.vendorId.toString(16).toUpperCase()}`, 14)} </>}

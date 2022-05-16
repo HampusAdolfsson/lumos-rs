@@ -79,6 +79,7 @@ export class ProfilesService {
       priority: undefined,
       areas: [{
         selector: undefined,
+        direction: "both",
         x: { px: 0 },
         y: { px: 0 },
         width: { percentage: 100 },

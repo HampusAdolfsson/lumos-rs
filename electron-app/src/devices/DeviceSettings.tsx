@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { WledSettings } from './WledSettings'
 import { TextField, Typography, Slider, Button, Tooltip, Divider, Theme, makeStyles, createStyles, Card, CardActions, CardContent, FormControl, InputLabel, Select, MenuItem, FormControlLabel, Checkbox, Switch, Chip, Dialog, DialogActions, DialogTitle, DialogContent } from '@material-ui/core';
-import { DeviceTypes, IDeviceSpecification } from './DeviceSpecification';
+import { DeviceTypes, IDeviceSpecification, SamplingTypes } from './DeviceSpecification';
 import { stat } from 'original-fs';
 import { QmkSettings } from './QmkSettings';
 
@@ -90,6 +90,12 @@ export function DeviceSettings(props: Props) {
             name="name" value={device.name} onChange={handleInput} />
           <TextField label="Number of LEDs" placeholder="1-490" color="primary" className={classes.formField} type="number" variant="outlined"
             name="numberOfLeds" value={device.numberOfLeds} onChange={handleInput} />
+        </div>
+        <div>
+          <Chip label="Horizontal" color={device.samplingType == SamplingTypes.Horizonal ? "secondary" : "default"}
+            onClick={ () => { setField("samplingType", SamplingTypes.Horizonal); } } className={classes.typeChip} />
+          <Chip label="Vertical" color={device.samplingType == SamplingTypes.Vertical ? "secondary" : "default"}
+            onClick={ () => { setField("samplingType", SamplingTypes.Vertical); } } className={classes.typeChip} />
         </div>
         <div className={classes.horizontal}>
               <Typography gutterBottom >

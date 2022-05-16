@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Paper, Button, SvgIcon, makeStyles, Theme, createStyles, Grid, Collapse, TableContainer, Table, TableBody, TableRow, TableCell, TableHead, Divider, Toolbar } from '@material-ui/core';
 import { DeviceSettings } from './DeviceSettings';
 import AddIcon from '@material-ui/icons/Add';
-import { IDeviceSpecification } from './DeviceSpecification';
+import { IDeviceSpecification, SamplingTypes } from './DeviceSpecification';
 import { DevicesService, IExtendedDeviceSpecification } from './DevicesService';
 import { Delete, Settings } from '@material-ui/icons';
 import { DeviceEntry } from './DeviceEntry';
@@ -92,6 +92,7 @@ const defaultDevice: IExtendedDeviceSpecification = {
   device: {
     name: '',
     numberOfLeds: 0,
+    samplingType: SamplingTypes.Horizonal,
     gamma: 2,
     colorTemp: 5500,
     saturationAdjustment: 0,

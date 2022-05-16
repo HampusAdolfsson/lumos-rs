@@ -11,6 +11,14 @@ export function composeAreaSpecifications(specs: IAreaSpecification[]): string {
         } else {
             result += `${spec.selector.width}x${spec.selector.height}`;
         }
+        result += " ";
+        if (spec.direction === "both") {
+            result += "*"
+        } else if (spec.direction === "horizontal") {
+            result += "-"
+        } else if (spec.direction === "vertical") {
+            result += "|"
+        }
         result += " {\n";
 
         result += `   x: ${composeMonitorDistance(spec.x)};\n`;
@@ -52,6 +60,7 @@ export class AreaSpecificationsParser {
 
     areaSpecification(): IAreaSpecification {
         const selector = this.selector();
+        const direction = this.direction();
         let next = this.tokens.pop();
         if (next?.type !== TokenType.BlockOpen) {
             throw this.throw(TokenType.BlockOpen, next);
@@ -86,6 +95,7 @@ export class AreaSpecificationsParser {
         });
         return {
             selector,
+            direction,
             width: fields.get("width")!,
             height: fields.get("height")!,
             x: fields.get("x")!,
@@ -158,6 +168,18 @@ export class AreaSpecificationsParser {
             return { height, width };
         }
         throw this.throw("'*' or monitor dimensions", next);
+    }
+
+    direction(): "both" | "horizontal" | "vertical" {
+        let next = this.tokens.pop();
+        if (next?.type === TokenType.Wildcard) {
+            return "both";
+        } else if (next?.type === TokenType.Hyphen) {
+            return "horizontal";
+        } else if (next?.type === TokenType.Pipe) {
+            return "vertical"
+        }
+        throw this.throw("'*', '-' or '|'", next);
     }
 
     throw(expected: string, actual: TokenWithLocation | undefined) {
