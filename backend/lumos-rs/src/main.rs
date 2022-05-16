@@ -62,7 +62,10 @@ async fn main() {
                         websocket::Frame::Profiles(profs) => {
                             info!("Received {} profile(s)", profs.len());
                             profile_listener.set_profiles(profs);
-                        }
+                        },
+                        websocket::Frame::Shutdown => {
+                            shutdown_tx.send(()).unwrap();
+                        },
                     };
                 }
             },

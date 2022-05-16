@@ -73,6 +73,11 @@ app.whenReady().then(() => {
   }
 });
 
+app.on("will-quit", () => {
+  backendProcess?.kill();
+  backendProcess = undefined;
+})
+
 app.on('window-all-closed', () => {
   // On OS X it is common for applications and their menu bar
   // to stay active until the user quits explicitly with Cmd + Q
@@ -80,7 +85,4 @@ app.on('window-all-closed', () => {
     app.quit();
   }
 });
-app.on('before-quit', () => {
-  backendProcess?.kill();
-}),
 app.allowRendererProcessReuse = true;
