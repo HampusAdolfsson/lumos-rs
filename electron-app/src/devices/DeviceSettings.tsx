@@ -4,6 +4,7 @@ import { TextField, Typography, Slider, Button, Tooltip, Divider, Theme, makeSty
 import { DeviceTypes, IDeviceSpecification, SamplingTypes } from './DeviceSpecification';
 import { stat } from 'original-fs';
 import { QmkSettings } from './QmkSettings';
+import { SerialSettings } from './SerialSettings';
 
 const useStyles = makeStyles((theme: Theme) =>
   createStyles({
@@ -75,8 +76,9 @@ export function DeviceSettings(props: Props) {
 
   const deviceComponent = device.type === DeviceTypes.WLED ?
     <WledSettings data={props.device.wledData} changed={val => { setField("wledData", val); }} /> : (
-    device.type === DeviceTypes.QMK ? <QmkSettings data={props.device.qmkData} changed={val => { setField("qmkData", val) }}/> : undefined
-  );
+      device.type === DeviceTypes.QMK ? <QmkSettings data={props.device.qmkData} changed={val => { setField("qmkData", val) }}/> : (
+      device.type === DeviceTypes.Serial ? <SerialSettings data={props.device.serialData} changed={val => { setField("serialData", val) }}/> : undefined
+    ));
 
   const classes = useStyles();
   return (
@@ -137,6 +139,8 @@ export function DeviceSettings(props: Props) {
           onClick={ () => { setField("type", DeviceTypes.WLED); } } className={classes.typeChip} />
         <Chip label="Qmk" color={device.type == DeviceTypes.QMK ? "secondary" : "default"}
           onClick={ () => { setField("type", DeviceTypes.QMK); } } className={classes.typeChip} />
+        <Chip label="Serial (Adalight)" color={device.type == DeviceTypes.Serial ? "secondary" : "default"}
+          onClick={ () => { setField("type", DeviceTypes.Serial); } } className={classes.typeChip} />
         {deviceComponent}
       </DialogContent>
       <Divider />

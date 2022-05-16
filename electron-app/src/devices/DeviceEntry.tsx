@@ -60,7 +60,9 @@ export function DeviceEntry(props: Props) {
             <TableCell align="right">
               {props.device.type == 0 ?
                 <>WLED - <Link target="_blank" href={"http://"+props.device.wledData?.ipAddress}>{props.device.wledData?.ipAddress}</Link></> :
-                <>Qmk - {truncate(`${props.device.qmkData?.productId.toString(16).toUpperCase()}/${props.device.qmkData?.vendorId.toString(16).toUpperCase()}`, 14)} </>}
+                props.device.type == 1 ?
+                <>Qmk - {truncate(`${props.device.qmkData?.productId.toString(16).toUpperCase()}/${props.device.qmkData?.vendorId.toString(16).toUpperCase()}`, 14)} </> :
+                <>Serial - {props.device.serialData?.portName} </>}
             </TableCell>
             <TableCell align="right" >
               {props.device.type == DeviceTypes.WLED && props.device.wledData?.ipAddress &&

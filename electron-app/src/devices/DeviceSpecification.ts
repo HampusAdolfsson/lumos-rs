@@ -1,6 +1,7 @@
 'use strict';
 import { IWledData } from './WledSettings';
 import { IQmkData } from './QmkSettings';
+import { ISerialData } from './SerialSettings';
 
 export interface IDeviceSpecification {
     name: string;
@@ -14,6 +15,7 @@ export interface IDeviceSpecification {
     type: number | null;
     wledData: IWledData | null;
     qmkData: IQmkData | null;
+    serialData: ISerialData | null;
 }
 
 export enum SamplingTypes {
@@ -24,4 +26,5 @@ export enum SamplingTypes {
 export enum DeviceTypes {
   WLED,
   QMK,
+  Serial,
 }

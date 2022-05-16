@@ -10,7 +10,7 @@ use std::net::SocketAddr;
 use simple_error::{SimpleError, SimpleResult, try_with};
 
 use crate::render_service::{RenderOutput, specification::{DeviceSpecification, SamplingType, AudioSamplingParameters, HsvAdjustment}};
-use crate::outputs::{WledRenderOutput, QmkRenderOutput};
+use crate::outputs::{WledRenderOutput, QmkRenderOutput, SerialRenderOutput};
 use crate::profiles::{self, ApplicationProfile};
 
 pub enum Frame {
@@ -50,6 +50,7 @@ mod deser_types {
         pub variant: u32,
         pub wled_data: Option<WledData>,
         pub qmk_data: Option<QmkData>,
+        pub serial_data: Option<SerialData>,
     }
     #[derive(serde::Deserialize)]
     #[serde(rename_all = "camelCase")]
@@ -61,6 +62,11 @@ mod deser_types {
     pub struct QmkData {
         pub vendor_id: u16,
         pub product_id: u16,
+    }
+    #[derive(serde::Deserialize)]
+    #[serde(rename_all = "camelCase")]
+    pub struct SerialData {
+        pub port_name: String,
     }
 
     #[derive(serde::Deserialize)]
@@ -210,6 +216,15 @@ fn parse_device(device_raw: deser_types::DeviceSpec) -> SimpleResult<DeviceSpeci
                     qmk_params.product_id
                 ).map(|out| -> Box<dyn RenderOutput + Send> { Box::new(out) })?,
                 None => return Err(SimpleError::new("Expected WLED parameters, but none were supplied")),
+            }
+        },
+        2 => {
+            match &device_raw.serial_data {
+                Some(serial_params) => SerialRenderOutput::new(
+                    device_raw.number_of_leds as usize,
+                    &serial_params.port_name
+                ).map(|out| -> Box<dyn RenderOutput + Send> { Box::new(out) })?,
+                None => return Err(SimpleError::new("Expected Serial parameters, but none were supplied")),
             }
         },
         v => return Err(SimpleError::new(format!("Unsupported device variant {}", v))),

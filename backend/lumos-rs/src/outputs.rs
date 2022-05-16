@@ -21,7 +21,7 @@ impl WledRenderOutput {
         let mut output_buffer = vec![0u8; 2 + 3*size];
         output_buffer[0] = 2; // DRGB protocol
         output_buffer[1] = 2;
-        let socket = try_with!(net::UdpSocket::bind("0.0.0.0:4469"), "Couldn't bind socket");
+        let socket = try_with!(net::UdpSocket::bind("0.0.0.0:0"), "Couldn't bind socket");
         Ok(WledRenderOutput {
             size,
             output_buffer,
@@ -101,6 +101,59 @@ impl RenderOutput for QmkRenderOutput {
                 format!("Expected to write {} bytes, but actual value was {}.", self.output_buffer.len(), bytes_written)
             ));
         }
+        Ok(())
+    }
+
+    fn size(&self) -> usize {
+        self.size
+    }
+}
+
+/// A serial port speaking the Adalight protocol.
+pub struct SerialRenderOutput {
+    port: Box<dyn serialport::SerialPort>,
+    output_buffer: Vec<u8>,
+    size: usize,
+}
+
+impl SerialRenderOutput {
+    pub fn new(size: usize, port_name: &str) -> Result<Self, SimpleError> {
+        if size > 256 {
+            return Err(SimpleError::new("The serial output supports a maximum size of 256"));
+        }
+        let port = serialport::new(port_name, 115_200)
+            .timeout(std::time::Duration::from_millis(10))
+            .open().map_err(SimpleError::from)?;
+        let mut output_buffer = vec![0u8; 6 + 3*size];
+        output_buffer[0] = 'A' as u8;
+        output_buffer[1] = 'd' as u8;
+        output_buffer[2] = 'a' as u8;
+        output_buffer[3] = 0;
+        output_buffer[4] = (size - 1) as u8;
+        output_buffer[5] = (size - 1) as u8 ^ 0x55;
+        Ok(SerialRenderOutput {
+            port,
+            output_buffer,
+            size,
+        })
+    }
+}
+
+impl RenderOutput for SerialRenderOutput {
+    fn draw(&mut self, buffer: &RgbVec) -> Result<(), SimpleError> {
+        assert_eq!(3*buffer.len() + 6, self.output_buffer.len());
+
+        for (i, &color) in buffer.iter().enumerate() {
+            self.output_buffer[6 + 3*i] = (color.red * 255f32) as u8;
+            self.output_buffer[6 + 3*i + 1] = (color.green * 255f32) as u8;
+            self.output_buffer[6 + 3*i + 2] = (color.blue * 255f32) as u8;
+        }
+
+        let written = self.port.write(&self.output_buffer).unwrap();
+        if written != self.output_buffer.len() {
+            return Err(SimpleError::new(format!("Expected to write {} bytes, actual value was {}", self.output_buffer.len(), written)));
+        }
+
         Ok(())
     }
 
