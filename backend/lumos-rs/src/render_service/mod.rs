@@ -38,7 +38,7 @@ pub struct RenderService {
 
 impl RenderService {
     pub fn new(desktop_capture_fps: f32, default_capture_region_hor: Rect, default_capture_region_ver: Rect) -> Self {
-        let (frame_capturer, frame_rx) = desktop_capture::DesktopCaptureController::new(desktop_capture_fps);
+        let (frame_capturer, frame_rx) = desktop_capture::DesktopCaptureController::new(desktop_capture_fps, crate::config::DESKTOP_CAPTURE_DECIMATION);
         let (audio_capturer, audio_rx) = audio_capture::AudioCaptureController::new();
         RenderService{
             running_devices: None,

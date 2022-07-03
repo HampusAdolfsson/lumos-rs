@@ -13,15 +13,17 @@ mod profiles;
 
 mod config {
     pub const DESKTOP_CAPTURE_FPS: f32 = 15.0;
+    /// How much to reduce the resolution of captured frames, to improve performance (the resolution is halved this number of times)
+    pub const DESKTOP_CAPTURE_DECIMATION: u32 = 2;
     pub const WEBSOCKET_PORT: u32 = 9901;
     use crate::common::Rect;
     pub const MONITORS: [Rect; 2] = [
         Rect{ left: 0, top: -8, width: 2560, height: 1440 },
-        Rect{ left: 2560, top: 192, width: 1920, height: 1080 },
+        Rect{ left: 2560, top: 148, width: 1920, height: 1080 },
     ];
-    // The region of monitor 0 to capture for horizontal samplers when no profile is active.
+    /// The region of monitor 0 to capture for horizontal samplers when no profile is active.
 	pub const DEFAULT_CAPTURE_REGION_HOR: Rect = Rect{ left: 0, top: 840, width: 2560, height: 600 };
-    // The region of monitor 0 to capture for vertical samplers when no profile is active.
+    /// The region of monitor 0 to capture for vertical samplers when no profile is active.
 	pub const DEFAULT_CAPTURE_REGION_VER: Rect = Rect{ left: 0, top: 0, width: 400, height: 1440 };
 }
 

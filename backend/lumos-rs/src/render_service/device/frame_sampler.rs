@@ -38,6 +38,11 @@ impl FrameSampler<Rect> for HorizontalFrameSampler {
         let mut buffer = vec![color::RgbF32::default(); self.size];
         // Make sure the sample region fits within the frame
         let mut region = self.region;
+        region.left /= frame.downscaling as isize;
+        region.width /= frame.downscaling as usize;
+        region.top /= frame.downscaling as isize;
+        region.height /= frame.downscaling as usize;
+
         region.left = region.left.max(0);
         region.width = region.width.min(frame.width - region.left as usize);
         region.top = region.top.max(0);
@@ -94,6 +99,11 @@ impl FrameSampler<Rect> for VerticalFrameSampler {
         let mut buffer = vec![color::RgbF32::default(); self.size];
         // Make sure the sample region fits within the frame
         let mut region = self.region;
+        region.left /= frame.downscaling as isize;
+        region.width /= frame.downscaling as usize;
+        region.top /= frame.downscaling as isize;
+        region.height /= frame.downscaling as usize;
+
         region.left = region.left.max(0);
         region.width = region.width.min(frame.width - region.left as usize);
         region.top = region.top.max(0);
@@ -141,6 +151,7 @@ mod tests {
                 width: 2,
                 height: 2,
                 buffer: buf.clone(),
+                downscaling: 1,
             };
             let result = sampler.sample(&frame);
             assert_eq!(result.len(), 1);
@@ -152,6 +163,7 @@ mod tests {
                 width: 4,
                 height: 1,
                 buffer: buf.clone(),
+                downscaling: 1,
             };
             let result = sampler.sample(&frame);
             assert_eq!(result.len(), 1);
@@ -163,6 +175,7 @@ mod tests {
                 width: 1,
                 height: 4,
                 buffer: buf.clone(),
+                downscaling: 1,
             };
             let result = sampler.sample(&frame);
             assert_eq!(result.len(), 1);
@@ -190,6 +203,7 @@ mod tests {
             width: 320,
             height: 16,
             buffer: buf.clone(),
+            downscaling: 1,
         };
         let result = sampler.sample(&frame);
         assert_eq!(result.len(), 3);
