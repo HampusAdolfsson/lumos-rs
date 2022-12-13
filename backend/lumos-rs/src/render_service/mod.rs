@@ -69,8 +69,11 @@ impl RenderService {
                 if let Some(region) = profile.actual_vertical_region {
                     device_group.set_vertical_region(region);
                 }
+                self.audio_capturer.start().await;
+                self.frame_capturer.start().await;
             } else {
-                self.frame_capturer.set_capture_monitor(0).await;
+                self.audio_capturer.stop().await;
+                self.frame_capturer.stop().await;
                 device_group.set_horizontal_region(self.default_capture_region_horizontal);
                 device_group.set_vertical_region(self.default_capture_region_vertical);
             }

@@ -7,17 +7,15 @@ mod desktop_duplicator;
 pub use desktop_duplicator::Frame;
 
 pub struct DesktopCaptureController {
-    stop: Option<oneshot::Sender<()>>,
     worker_thread: Option<std::thread::JoinHandle<()>>,
+    shutdown: Option<oneshot::Sender<()>>,
+    running: mpsc::Sender<bool>,
     monitor_select: mpsc::Sender<u32>,
 }
 
 impl DesktopCaptureController {
     /// Creates a new capture controller. It will generate `fps` frames each second. The width and height of each
     /// frame is equal to the monitor width/height divided by (1 << `decimation_amount`).
-    ///
-    /// The frames are generated in a background thread. The thread runs until all receivers have been dropped, or `shutdown`
-    /// is received.
     ///
     /// Returns (`capture_controller`, `frames_rx`):
     ///
@@ -31,13 +29,26 @@ impl DesktopCaptureController {
     pub fn new(fps: f32, decimation_amount: u32) -> (Self, watch::Receiver<Frame>) {
         let (frame_tx, frame_rx) = watch::channel(Frame{buffer: Vec::new(), height: 0, width: 0, downscaling: 1});
         let (monitor_select_tx, monitor_select_rx) = mpsc::channel(8);
-        let (stop_tx, stop_rx) = oneshot::channel();
-        let handle = capture_desktop_frames(fps, decimation_amount, frame_tx, monitor_select_rx, stop_rx);
+        let (shutdown_tx, shutdown_rx) = oneshot::channel();
+        let (running_tx, running_rx) = mpsc::channel(2);
+        let handle = capture_desktop_frames(fps, decimation_amount, frame_tx, monitor_select_rx, shutdown_rx, running_rx);
         (DesktopCaptureController{
-            stop: Some(stop_tx),
+            shutdown: Some(shutdown_tx),
             worker_thread: Some(handle),
             monitor_select: monitor_select_tx,
+            running: running_tx,
         }, frame_rx)
+    }
+
+    /// Starts capturing frames.
+    ///
+    /// Runs until [stop] is called, the struct is dropped or all receivers are closed.
+    pub async fn start(&self) {
+        self.running.send(true).await.unwrap()
+    }
+    // Stops capturing frames.
+    pub async fn stop(&self) {
+        self.running.send(false).await.unwrap()
     }
 
     pub async fn set_capture_monitor(&mut self, index: u32) {
@@ -49,7 +60,7 @@ impl DesktopCaptureController {
 
 impl Drop for DesktopCaptureController {
     fn drop(&mut self) {
-        if let Some(stop) = self.stop.take() {
+        if let Some(stop) = self.shutdown.take() {
             stop.send(()).unwrap();
         }
         if let Some(worker) = self.worker_thread.take() {
@@ -63,7 +74,8 @@ fn capture_desktop_frames(
     decimation_amount: u32,
     frames_tx: watch::Sender<Frame>,
     mut monitor_index: mpsc::Receiver<u32>,
-    mut stop: oneshot::Receiver<()>
+    mut shutdown: oneshot::Receiver<()>,
+    mut running_rx: mpsc::Receiver<bool>,
 ) -> std::thread::JoinHandle<()> {
     // Since parts of the windows API are not Send, this cannot be run in a multi-threaded tokio runtime. Instead, we
     // spawn a new thread for it and run a single-threaded blocking runtime.
@@ -74,33 +86,45 @@ fn capture_desktop_frames(
             let mut manager = desktop_duplicator::DesktopDuplicator::new(0, decimation_amount, std::time::Duration::from_millis(200)).expect("Could not open desktop duplicator");
             let mut interval = tokio::time::interval(std::time::Duration::from_secs_f32(1.0/fps));
 
-            // The event loop, runs until we receive from `stop` or all receivers have been dropped
-            loop {
-                tokio::select! {
-                    _ = interval.tick() => {
-                        // Capture a frame if needed
-                        match manager.capture_frame() {
-                            Err(e) => log_capture_err(e),
-                            Ok(frame_info) => {
-                                last_frame = Some(frame_info);
-                            },
-                        };
-                        // Always send a frame if possible
-                        if let Some(frame) = last_frame.as_ref() {
-                            if frames_tx.send(frame.clone()).is_err() {
-                                // All receivers have been dropped
-                                break;
+            let mut is_exiting = false;
+            let mut is_running = false;
+
+            // The event loop, runs until we receive from `shutdown` or all receivers have been dropped
+            while !is_exiting {
+                while !is_running && !is_exiting {
+                    tokio::select! {
+                        Some(value) = running_rx.recv() => is_running = value,
+                        _ = &mut shutdown => is_exiting = true,
+                    }
+                }
+                while is_running && !is_exiting {
+                    tokio::select! {
+                        _ = interval.tick() => {
+                            // Capture a frame if needed
+                            match manager.capture_frame() {
+                                Err(e) => log_capture_err(e),
+                                Ok(frame_info) => {
+                                    last_frame = Some(frame_info);
+                                },
+                            };
+                            // Always send a frame if possible
+                            if let Some(frame) = last_frame.as_ref() {
+                                if frames_tx.send(frame.clone()).is_err() {
+                                    // All receivers have been dropped
+                                    break;
+                                }
                             }
-                        }
-                    }, /* interval */
-                    Some(index) = monitor_index.recv() => {
-                        if let Err(e) = manager.set_capture_monitor_index(index) {
-                            log::error!("Failed to set capture monitor: {}", e);
-                        }
-                    },
-                    _ = &mut stop => {
-                        // We've been requested to stop, quit the loop and finish this task
-                        break;
+                        }, /* interval */
+                        Some(index) = monitor_index.recv() => {
+                            if let Err(e) = manager.set_capture_monitor_index(index) {
+                                log::error!("Failed to set capture monitor: {}", e);
+                            }
+                        },
+                        _ = &mut shutdown => {
+                            // We've been requested to stop, quit the loop and finish this task
+                            break;
+                        },
+                        Some(value) = running_rx.recv() => is_running = value,
                     }
                 }
             }
