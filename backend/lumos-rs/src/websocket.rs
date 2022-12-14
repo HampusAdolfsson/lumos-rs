@@ -5,6 +5,7 @@ use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::{broadcast, mpsc};
 use tokio_stream::Stream;
 use tokio_stream::wrappers::ReceiverStream;
+use tokio_util::sync::CancellationToken;
 use std::future::Future;
 use std::net::SocketAddr;
 use simple_error::{SimpleError, SimpleResult, try_with};
@@ -102,7 +103,7 @@ mod deser_types {
     }
 }
 
-pub async fn run_websocket_server(port: u32, mut shutdown: broadcast::Receiver<()>) -> SimpleResult<(impl Future<Output=()>, impl Stream<Item=Frame>)> {
+pub async fn run_websocket_server(port: u32, cancel_token: CancellationToken) -> SimpleResult<(impl Future<Output=()>, impl Stream<Item=Frame>)> {
     let (frame_tx, frame_rx) = mpsc::channel(16);
     let addr = format!("127.0.0.1:{}", port);
     let listener = TcpListener::bind(&addr).await.map_err(SimpleError::from)?;
@@ -117,7 +118,7 @@ pub async fn run_websocket_server(port: u32, mut shutdown: broadcast::Receiver<(
                         break;
                     }
                 },
-                _ = shutdown.recv() => {
+                _ = cancel_token.cancelled() => {
                     break;
                 }
             };

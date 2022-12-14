@@ -1,7 +1,8 @@
-#![feature(result_option_inspect, let_chains)]
+#![feature(result_option_inspect, let_chains, test)]
 #![allow(clippy::needless_return)]
 use log::{info, warn};
 use futures::StreamExt;
+use tokio_util::sync::CancellationToken;
 
 mod common;
 mod render_service;
@@ -33,16 +34,17 @@ async fn main() {
         simplelog::LevelFilter::Debug,
         simplelog::Config::default(),
         simplelog::TerminalMode::Stdout,
-        simplelog::ColorChoice::Never
+        simplelog::ColorChoice::Auto
     ).unwrap();
     info!("Starting application");
 
-    // Used to tell all long-running tasks to exit
-    let (shutdown_tx, mut shutdown_rx) = tokio::sync::broadcast::channel(1);
+    // Used to tell all long-running tasks to exit when main exits
+    let shutdown = CancellationToken::new();
+    let shutdown_guard = shutdown.clone().drop_guard();
 
     let (ws_task, mut ws_messages) = websocket::run_websocket_server(
         config::WEBSOCKET_PORT,
-        shutdown_tx.subscribe()
+        shutdown.clone(),
     ).await.expect("Could not open websocket");
     tokio::spawn(ws_task);
 
@@ -66,7 +68,7 @@ async fn main() {
                             profile_listener.set_profiles(profs);
                         },
                         websocket::Frame::Shutdown => {
-                            shutdown_tx.send(()).unwrap();
+                            shutdown.cancel();
                         },
                     };
                 }
@@ -78,10 +80,12 @@ async fn main() {
                 }
             },
             _ = tokio::signal::ctrl_c() => {
-                shutdown_tx.send(()).unwrap();
+                shutdown.cancel();
                 break;
             },
-            _ = shutdown_rx.recv() => break,
+            _ = shutdown.cancelled() => {
+                break;
+            }
         }
     }
     info!("Shutting down...");

@@ -1,6 +1,7 @@
 use log::debug;
 
 use tokio::sync::{watch, oneshot, mpsc};
+use tokio_util::sync::CancellationToken;
 
 mod desktop_duplicator;
 
@@ -8,7 +9,7 @@ pub use desktop_duplicator::Frame;
 
 pub struct DesktopCaptureController {
     worker_thread: Option<std::thread::JoinHandle<()>>,
-    shutdown: Option<oneshot::Sender<()>>,
+    cancel_token: CancellationToken,
     running: mpsc::Sender<bool>,
     monitor_select: mpsc::Sender<u32>,
 }
@@ -29,11 +30,11 @@ impl DesktopCaptureController {
     pub fn new(fps: f32, decimation_amount: u32) -> (Self, watch::Receiver<Frame>) {
         let (frame_tx, frame_rx) = watch::channel(Frame{buffer: Vec::new(), height: 0, width: 0, downscaling: 1});
         let (monitor_select_tx, monitor_select_rx) = mpsc::channel(8);
-        let (shutdown_tx, shutdown_rx) = oneshot::channel();
+        let cancel_token = CancellationToken::new();
         let (running_tx, running_rx) = mpsc::channel(2);
-        let handle = capture_desktop_frames(fps, decimation_amount, frame_tx, monitor_select_rx, shutdown_rx, running_rx);
+        let handle = capture_desktop_frames(fps, decimation_amount, frame_tx, monitor_select_rx, cancel_token.clone(), running_rx);
         (DesktopCaptureController{
-            shutdown: Some(shutdown_tx),
+            cancel_token,
             worker_thread: Some(handle),
             monitor_select: monitor_select_tx,
             running: running_tx,
@@ -60,9 +61,7 @@ impl DesktopCaptureController {
 
 impl Drop for DesktopCaptureController {
     fn drop(&mut self) {
-        if let Some(stop) = self.shutdown.take() {
-            stop.send(()).unwrap();
-        }
+        self.cancel_token.cancel();
         if let Some(worker) = self.worker_thread.take() {
             worker.join().unwrap();
         }
@@ -74,7 +73,7 @@ fn capture_desktop_frames(
     decimation_amount: u32,
     frames_tx: watch::Sender<Frame>,
     mut monitor_index: mpsc::Receiver<u32>,
-    mut shutdown: oneshot::Receiver<()>,
+    cancel_token: CancellationToken,
     mut running_rx: mpsc::Receiver<bool>,
 ) -> std::thread::JoinHandle<()> {
     // Since parts of the windows API are not Send, this cannot be run in a multi-threaded tokio runtime. Instead, we
@@ -86,18 +85,17 @@ fn capture_desktop_frames(
             let mut manager = desktop_duplicator::DesktopDuplicator::new(0, decimation_amount, std::time::Duration::from_millis(200)).expect("Could not open desktop duplicator");
             let mut interval = tokio::time::interval(std::time::Duration::from_secs_f32(1.0/fps));
 
-            let mut is_exiting = false;
             let mut is_running = false;
 
             // The event loop, runs until we receive from `shutdown` or all receivers have been dropped
-            while !is_exiting {
-                while !is_running && !is_exiting {
+            while !cancel_token.is_cancelled() {
+                while !is_running && !cancel_token.is_cancelled() {
                     tokio::select! {
                         Some(value) = running_rx.recv() => is_running = value,
-                        _ = &mut shutdown => is_exiting = true,
+                        _ = cancel_token.cancelled() => break,
                     }
                 }
-                while is_running && !is_exiting {
+                while is_running && !cancel_token.is_cancelled() {
                     tokio::select! {
                         _ = interval.tick() => {
                             // Capture a frame if needed
@@ -120,7 +118,7 @@ fn capture_desktop_frames(
                                 log::error!("Failed to set capture monitor: {}", e);
                             }
                         },
-                        _ = &mut shutdown => {
+                        _ = cancel_token.cancelled() => {
                             // We've been requested to stop, quit the loop and finish this task
                             break;
                         },
