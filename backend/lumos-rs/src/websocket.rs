@@ -216,7 +216,7 @@ fn parse_device(device_raw: deser_types::DeviceSpec) -> SimpleResult<DeviceSpeci
                     qmk_params.vendor_id,
                     qmk_params.product_id
                 ).map(|out| -> Box<dyn RenderOutput + Send> { Box::new(out) })?,
-                None => return Err(SimpleError::new("Expected WLED parameters, but none were supplied")),
+                None => return Err(SimpleError::new("Expected QMK parameters, but none were supplied")),
             }
         },
         2 => {
