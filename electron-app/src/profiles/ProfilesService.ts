@@ -3,6 +3,7 @@ import { WebsocketService } from '../WebsocketService';
 import { BehaviorSubject } from 'rxjs';
 import Path from 'path';
 import { readFileSync, existsSync, mkdirSync, writeFileSync } from 'fs';
+import { DevicesService } from '../devices/DevicesService';
 
 export class ProfilesService {
   private static readonly profilesSaveFile = Path.join(process.env.APPDATA || ".", "lumos-rs", "profiles.json");
@@ -51,12 +52,17 @@ export class ProfilesService {
     this.sendProfiles(initialCategories);
     WebsocketService.Instance.receivedMessage.subscribe(message => {
       if (message.subject === 'activeProfile') {
+        const hadProfile = this.activeProfiles.value.size > 0;
         const monitorIndex = message.contents["monitor"];
         let newMap = new Map(this.activeProfiles.value);
         if (message.contents["profile"] != undefined) {
           newMap.set(monitorIndex, message.contents["profile"]);
         } else {
           newMap.delete(monitorIndex);
+        }
+        const hasProfile = newMap.size > 0;
+        if (hasProfile != hadProfile) {
+          DevicesService.Instance.setDevices(hasProfile ? DevicesService.Instance.devices.value : [], false);
         }
         this.activeProfiles.next(newMap);
       }
