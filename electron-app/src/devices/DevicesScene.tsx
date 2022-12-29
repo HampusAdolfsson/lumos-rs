@@ -45,19 +45,19 @@ export function DevicesScene() {
             onDeviceDeleted={() => {
               const newDevs: IExtendedDeviceSpecification[] = JSON.parse(JSON.stringify(devices));
               newDevs.splice(i, 1);
-              DevicesService.Instance.setDevices(newDevs);
+              DevicesService.Instance.setDevices(newDevs, true);
               setDevices(newDevs);
             }}
             onDeviceEnabledChanged={(enabled) => {
               const newDevs: IExtendedDeviceSpecification[] = JSON.parse(JSON.stringify(devices));
               newDevs[i].enabled = enabled;
-              DevicesService.Instance.setDevices(newDevs);
+              DevicesService.Instance.setDevices(newDevs, true);
               setDevices(newDevs);
             }}
             onDeviceChanged={dev => {
               const newDevs: IExtendedDeviceSpecification[] = JSON.parse(JSON.stringify(devices));
               newDevs[i].device = dev;
-              DevicesService.Instance.setDevices(newDevs);
+              DevicesService.Instance.setDevices(newDevs, true);
               setDevices(newDevs);
             }}
           />
@@ -70,7 +70,7 @@ export function DevicesScene() {
         <Button variant="outlined" color="primary" disableElevation className={classes.button} startIcon={<AddIcon/>}
           onClick={() => {
               const newDevs = devices.concat([JSON.parse(JSON.stringify(defaultDevice))]);
-              DevicesService.Instance.setDevices(newDevs);
+              DevicesService.Instance.setDevices(newDevs, true);
               setDevices(newDevs);
             }}>
           Add Device
@@ -101,5 +101,6 @@ const defaultDevice: IExtendedDeviceSpecification = {
     type: null,
     wledData: null,
     qmkData: null,
+    serialData: null,
   }
 };

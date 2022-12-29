@@ -22,4 +22,5 @@ export interface IProfileCategory {
     name: string;
     profiles: IProfile[];
     priority: number;
+    enabled: boolean;
 }

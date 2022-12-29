@@ -80,4 +80,5 @@ const defaultCategory: IProfileCategory = {
   name: '',
   profiles: [],
   priority: 0,
+  enabled: true,
 };

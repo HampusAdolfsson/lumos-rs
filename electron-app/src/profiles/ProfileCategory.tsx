@@ -1,4 +1,5 @@
 import { Box, Button, Collapse, createStyles, Dialog, DialogActions, DialogContent, DialogTitle, IconButton, makeStyles, Table, TableBody, TableCell, TableRow, TextField, Theme, Typography } from '@material-ui/core';
+import Switch from '@material-ui/core/Switch';
 import { Add, Delete, Edit, KeyboardArrowDown, KeyboardArrowRight, KeyboardArrowUp, Settings } from '@material-ui/icons';
 import React, { useState } from 'react';
 import { IProfile, IProfileCategory } from './Profile';
@@ -39,6 +40,7 @@ export function ProfileCategory(props: Props) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState(props.category.name);
   const [priority, setPriority] = useState(props.category.priority);
+  const [enabled, setEnabled] = useState(props.category.enabled);
 
   const activeMonitors: number[] = [];
   const activeProfilesRows: JSX.Element[] = [];
@@ -67,6 +69,12 @@ export function ProfileCategory(props: Props) {
           </IconButton>
           <Typography variant="subtitle1" display="inline">{props.category.name || "New Category"}</Typography>
           {/* <Typography variant="subtitle1" display="inline" color="primary"> {activeMonitors.map(monitor => circledNumbers[monitor]).join(" ")}</Typography> */}
+          <Switch checked={enabled} onChange={(_, v) => {
+            setEnabled(v);
+            const newCategory = JSON.parse(JSON.stringify(props.category));
+            newCategory.enabled = v;
+            props.onCategoryChanged(newCategory);
+          }}/>
         </TableCell>
         <TableCell>
           {props.category.profiles.length} profile(s)

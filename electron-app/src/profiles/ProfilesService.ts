@@ -93,6 +93,7 @@ export class ProfilesService {
   }
 
   private sendProfiles(categories: IProfileCategory[]) {
+    categories = categories.filter(category => category.enabled);
     const flattenedProfiles = categories.flatMap(category => {
       const profiles: IProfile[] = JSON.parse(JSON.stringify(category.profiles));
       profiles.forEach(profile => {
