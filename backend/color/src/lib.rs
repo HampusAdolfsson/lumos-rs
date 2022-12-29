@@ -1,5 +1,8 @@
 use std::borrow::Borrow;
 
+mod calibration;
+pub use calibration::*;
+
 /// A color value in the RGB color space
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct Rgb<T> {
@@ -10,6 +13,14 @@ pub struct Rgb<T> {
 
 pub type RgbF32 = Rgb<f32>;
 pub type RgbU8 = Rgb<u8>;
+
+pub fn blend(col1: &RgbF32, col2: &RgbF32, amount: f32) -> RgbF32 {
+    Rgb {
+        red: col1.red * (1.0 - amount) + col2.red * amount,
+        green: col1.green * (1.0 - amount) + col2.green * amount,
+        blue: col1.blue * (1.0 - amount) + col2.blue * amount,
+    }
+}
 
 /// A color value in the HSV (hue, saturation, value) color space
 #[derive(Clone, Copy, Debug, Default)]
