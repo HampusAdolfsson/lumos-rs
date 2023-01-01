@@ -1,5 +1,5 @@
 use std::mem::MaybeUninit;
-use log::debug;
+use log::trace;
 use simple_error::{SimpleResult, SimpleError};
 use tokio::sync::mpsc;
 use windows::Win32::UI::WindowsAndMessaging::{GetWindowInfo, GetWindowTextA, WINDOWINFO};
@@ -41,7 +41,7 @@ impl FocusedWindowListener {
                 unsafe { GetWindowTextA(hwnd, title.as_mut_slice()); }
                 String::from_utf8_lossy(&title).to_string()
             };
-            debug!("Window: {}", &title_str);
+            trace!("Window: {}", &title_str);
             if title_str.is_empty() || title_str.eq("Task Switching") || title_str.eq("Search") {
                 continue;
             }

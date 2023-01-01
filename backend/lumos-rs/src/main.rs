@@ -40,7 +40,7 @@ async fn main() {
 
     // Used to tell all long-running tasks to exit when main exits
     let shutdown = CancellationToken::new();
-    let shutdown_guard = shutdown.clone().drop_guard();
+    let _shutdown_guard = shutdown.clone().drop_guard();
 
     let (ws_task, mut ws_messages) = websocket::run_websocket_server(
         config::WEBSOCKET_PORT,

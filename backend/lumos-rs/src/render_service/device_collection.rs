@@ -52,13 +52,13 @@ impl DeviceCollection {
     /// Sets the desktop capture region to use for horizontally sampling devices (e.g. those using [super::specification::SamplingType::Horizontal])
     pub fn set_horizontal_region(&self, region: Rect) {
         if self.hor_samplers_region.send(region).is_err() {
-            log::debug!("Failed to set horizontal sampling region: all receivers have closed.");
+            log::trace!("Failed to set horizontal sampling region: all receivers have closed.");
         }
     }
     /// Sets the desktop capture region to use for vertically sampling devices (e.g. those using [super::specification::SamplingType::Vertical])
     pub fn set_vertical_region(&self, region: Rect) {
         if self.ver_samplers_region.send(region).is_err() {
-            log::debug!("Failed to set vertical sampling region: all receivers have closed.");
+            log::trace!("Failed to set vertical sampling region: all receivers have closed.");
         }
     }
 }
