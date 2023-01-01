@@ -1,6 +1,6 @@
 # lumos-rs
 
-lumos-rs is an [Ambilight](https://en.wikipedia.org/wiki/Bias_lighting) implementation in Rust, with an electron-react
+lumos-rs is an [Ambilight](https://en.wikipedia.org/wiki/Bias_lighting) implementation in Rust, with a tauri-react
 frontend. The idea is similar to [hyperion-ng](), with significantly less configuration, but with some extra features
 such as audio reactivity and application- or game-specific profiles.
 
