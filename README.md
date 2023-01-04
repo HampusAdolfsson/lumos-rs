@@ -8,4 +8,5 @@ The application can output color data to network devices running [WLED](https://
 keyboards running [QMK](https://qmk.fm/).
 
 ## Screenshots
-TODO
+![](docs/devices_screen.png)
+![](docs/profiles_screen.png)
