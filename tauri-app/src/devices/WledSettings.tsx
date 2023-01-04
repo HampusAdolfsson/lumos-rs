@@ -1,6 +1,5 @@
-// import React from 'react';
 import React, { useState } from 'react';
-import { Button, TextField } from '@mui/material';
+import { Input } from 'antd';
 
 export interface IWledData {
   ipAddress: string;
@@ -15,11 +14,11 @@ export function WledSettings(props: Props) {
   const [ipAddress, setIpAddress] = useState(props.data?.ipAddress || '');
 
   return <div>
-          <TextField label="IP Address" placeholder="192.168.x.x" color="primary"
-          value={ipAddress} onChange={ev => {
-            setIpAddress(ev.target.value);
-            const newVal = { ipAddress: ev.target.value };
-            props.changed(newVal);
-          }} />
+          <Input placeholder="IP Address"
+            value={ipAddress} onChange={ev => {
+              setIpAddress(ev.target.value);
+              const newVal = { ipAddress: ev.target.value };
+              props.changed(newVal);
+            }} />
           </div>
 }

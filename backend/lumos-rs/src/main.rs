@@ -1,3 +1,4 @@
+#![windows_subsystem = "windows"]
 #![feature(result_option_inspect, let_chains, test)]
 #![allow(clippy::needless_return)]
 use log::{info, warn};

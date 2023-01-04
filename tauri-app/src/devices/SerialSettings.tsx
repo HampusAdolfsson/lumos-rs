@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { TextField } from '@mui/material';
+import { Input } from 'antd';
 
 export interface ISerialData {
   portName: string;
@@ -14,7 +14,7 @@ export function SerialSettings(props: Props) {
   const [portName, setPortName] = useState(props.data?.portName || '');
 
   return <div>
-          <TextField label="Port Name" placeholder="COM3" color="primary"
+          <Input placeholder="Port Name"
           value={portName} onChange={ev => {
             setPortName(ev.target.value);
             const newVal = { portName: ev.target.value };

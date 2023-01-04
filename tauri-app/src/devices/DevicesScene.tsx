@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Paper, Button, TableContainer, Table, TableBody, TableRow, Divider, Toolbar } from '@mui/material';
-import AddIcon from '@mui/icons-material/Add';
-import { SamplingTypes } from './DeviceSpecification';
+import { Button, Card, Space, Switch, Table, theme } from 'antd';
+import { PlusOutlined } from '@ant-design/icons'
+import { DeviceTypes, SamplingTypes } from './DeviceSpecification';
 import { DevicesService, IExtendedDeviceSpecification } from './DevicesService';
-import { DeviceEntry } from './DeviceEntry';
+import DeviceEntryActions from './DeviceEntryActions';
+import { ColumnsType } from 'antd/es/table';
 
 export function DevicesScene() {
   const [devices, setDevices] = useState([] as Array<IExtendedDeviceSpecification>);
@@ -15,50 +16,62 @@ export function DevicesScene() {
     };
   });
 
-  const deviceComponents = devices.map((dev, i) => {
-    return (
-        <TableRow key={i}>
-          <DeviceEntry device={dev.device} enabled={dev.enabled}
-            onDeviceDeleted={async() => {
-              const newDevs: IExtendedDeviceSpecification[] = JSON.parse(JSON.stringify(devices));
-              newDevs.splice(i, 1);
-              (await DevicesService.Instance()).setDevices(newDevs, true);
-              setDevices(newDevs);
-            }}
-            onDeviceEnabledChanged={async(enabled) => {
-              const newDevs: IExtendedDeviceSpecification[] = JSON.parse(JSON.stringify(devices));
-              newDevs[i].enabled = enabled;
-              (await DevicesService.Instance()).setDevices(newDevs, true);
-              setDevices(newDevs);
-            }}
-            onDeviceChanged={async dev => {
-              const newDevs: IExtendedDeviceSpecification[] = JSON.parse(JSON.stringify(devices));
-              newDevs[i].device = dev;
-              (await DevicesService.Instance()).setDevices(newDevs, true);
-              setDevices(newDevs);
-            }}
-          />
-        </TableRow>);
-  });
+  const columns: ColumnsType<IExtendedDeviceSpecification> = [
+    {
+      key: "nameAndEnabled",
+      render: (_, device, i) => (
+        <Space>
+          <Switch checked={device.enabled} onChange={async(checked) => {
+            const newDevs: IExtendedDeviceSpecification[] = JSON.parse(JSON.stringify(devices));
+            newDevs[i].enabled = checked;
+            (await DevicesService.Instance()).setDevices(newDevs, true);
+            setDevices(newDevs);
+          }}/>
+          <span>{device.device.name}</span>
+        </Space>
+      ),
+    },
+    {
+      key: "ledinfo",
+      render: (_, device) => <span>{device.device.numberOfLeds} LEDs</span>,
+    },
+    {
+      key: "location",
+      render: (_, device) => (
+          device.device.type == DeviceTypes.WLED ?
+          <>WLED - <a target="_blank" href={"http://"+device.device.wledData?.ipAddress}>{device.device.wledData?.ipAddress}</a></> :
+          device.device.type == DeviceTypes.QMK ?
+          <>Qmk - {truncate(`${device.device.qmkData?.productId.toString(16).toUpperCase()}/${device.device.qmkData?.vendorId.toString(16).toUpperCase()}`, 14)} </> :
+          <>Serial - {device.device.serialData?.portName} </>
+      ),
+    },
+    {
+      key: "actions",
+      align: "right",
+      render: (_, device, i) =>
+        (<DeviceEntryActions device={device.device} onDeviceChanged={async(dev) => {
+            const newDevs: IExtendedDeviceSpecification[] = JSON.parse(JSON.stringify(devices));
+            newDevs[i].device = dev;
+            (await DevicesService.Instance()).setDevices(newDevs, true);
+            setDevices(newDevs);
+          }} onDeviceDeleted={async() => {
+            const newDevs: IExtendedDeviceSpecification[] = JSON.parse(JSON.stringify(devices));
+            newDevs.splice(i, 1);
+            (await DevicesService.Instance()).setDevices(newDevs, true);
+            setDevices(newDevs);
+          }}/>)
+    }
+  ];
   return (
     <div id="devicesScene">
-      <TableContainer component={Paper}>
-        <Table>
-          <TableBody>
-            {deviceComponents}
-          </TableBody>
-        </Table>
-        <Toolbar>
-          <Button variant="outlined" color="primary" disableElevation sx={{ marginRight: 30 }} startIcon={<AddIcon/>}
-          onClick={async() => {
-          const newDevs = devices.concat([JSON.parse(JSON.stringify(defaultDevice))]);
-          (await DevicesService.Instance()).setDevices(newDevs, true);
-          setDevices(newDevs);
-          }}>
-          Add Device
-        </Button>
-        </Toolbar>
-      </TableContainer>
+    <Card style={{ background: "#ffffff11" }} title="Devices" extra={<Button type="primary" icon={<PlusOutlined/>} onClick={async() => {
+        const newDevs = devices.concat([JSON.parse(JSON.stringify(defaultDevice))]);
+        (await DevicesService.Instance()).setDevices(newDevs, true);
+        setDevices(newDevs);
+      }}>Add</Button>}>
+      <Table dataSource={devices.map((dev, i) => { return { ...dev, key: i };})} columns={columns}
+        pagination={false} showHeader={false}/>
+    </Card>
     </div>
   )
 }
@@ -80,3 +93,8 @@ const defaultDevice: IExtendedDeviceSpecification = {
     serialData: null,
   }
 };
+
+function truncate(str: string, maxLength: number): string {
+  if (str.length < maxLength) return str;
+  return str.substring(0, maxLength - 1) + "…";
+}

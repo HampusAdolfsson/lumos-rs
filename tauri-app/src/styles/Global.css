@@ -1,11 +1,43 @@
-html, body {
+html, body, .fill-vertical {
     height: 100%;
+}
+body {
+    /* background-color: #9E339F !important; */
+    /* background-image: url("https://gw.alipayobjects.com/mdn/rms_08e378/afts/img/A*FMluR4vJhaQAAAAAAAAAAAAAARQnAQ") !important; */
+    background-image: url("http://images.designtrends.com/wp-content/uploads/2015/11/26093013/Purple-Backgrounds9.jpg") !important;
+    background-repeat: no-repeat;
+    background-size: 100%;
+    background-attachment: fixed;
 }
 
 .scene {
-    padding: 25px 50px;
+    padding: 20px 20px;
+    height: 100%;
+    overflow: auto;
 }
 
-a {
-    color: #df78ef;
+.scene::-webkit-scrollbar, .ant-modal-wrap::-webkit-scrollbar  {
+    width: 6px;
+}
+.scene::-webkit-scrollbar-thumb, .ant-modal-wrap::-webkit-scrollbar-thumb  {
+    background-color: #ffffff44;
+    border-radius: 3px;
+}
+
+.ant-app {
+    height: 100%;
+    backdrop-filter: blur(40px);
+}
+
+#root:has(> div) {
+    height: 100%;
+}
+
+.ant-table {
+    background: none !important;
+    background-color: #00000000 !important;
+}
+
+.ant-table tr:hover td {
+    background: #ffffff11 !important;
 }

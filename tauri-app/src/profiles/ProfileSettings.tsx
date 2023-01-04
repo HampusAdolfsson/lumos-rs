@@ -1,18 +1,9 @@
 import React, { useState } from 'react';
-import { TextField, Button, Dialog, DialogTitle, DialogActions, DialogContent, Typography } from '@mui/material';
 import { IProfile } from './Profile';
 import { AreaSpecificationsParser, composeAreaSpecifications } from './parsing/AreaSpecificationParser';
 import { tokenize } from './parsing/Lexer';
 import { StringReader } from './parsing/StringReader';
-import { styled } from '@mui/material/styles';
-import { TextFieldProps } from '@mui/material/TextField';
-
-const FormField = styled(TextField)<TextFieldProps>(() => ({
-  marginLeft: 5,
-  marginRight: 5,
-  marginBottom: 10,
-  width: 500
-}));
+import { Alert, Input, InputNumber, Modal, Space } from 'antd';
 
 export interface Props {
   profile: IProfile;
@@ -41,38 +32,29 @@ export function ProfileSettings(props: Props) {
 
   return (
     <>
-      <Dialog open={props.open} onClose={props.onClosed}>
-        <DialogTitle>
-          Profile Settings
-        </DialogTitle>
-        <DialogContent sx={{ flexDirection: "column" }}>
-          <FormField label="Window Title Regex" placeholder="^my\s+regex$" variant="outlined"
-            value={profile.regex} onChange={handleInput} name="regex"/>
-          <FormField label="Definition(s)" multiline value={areaSpecification}
-            onChange={ev => {
-              setAreaSpecification(ev.target.value);
-              setDirty(true);
-              }} sx={{ "& .MuiOutlinedInput-root": { fontFamily: "Roboto Mono" }}}/>
-          <Typography style={{color: "red"}}>{errorMsg}</Typography>
-          <TextField label="Priority" type="number" value={priority} onChange={ev => {setPriority(ev.target.value); setDirty(true);}}/>
-        </DialogContent>
-        <DialogActions>
-          <Button color="info" size="small" onClick={props.onClosed}>Cancel</Button>
-          <Button color="primary" size="small" disabled={!dirty} onClick={() => {
-              try {
-                const areas = new AreaSpecificationsParser().parse(tokenize(new StringReader(areaSpecification)));
-                profile.areas = areas;
-                profile.priority = priority === "" || priority === undefined ? undefined : Number(priority);
-                setDirty(false);
-                props.onProfileChanged(profile);
-              } catch(e) {
-                setErrorMsg(e as string);
-              }
-            }}>
-            Save
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <Modal open={props.open} onCancel={props.onClosed} onOk={() => {
+        try {
+          const areas = new AreaSpecificationsParser().parse(tokenize(new StringReader(areaSpecification)));
+          profile.areas = areas;
+          profile.priority = priority === "" || priority === undefined ? undefined : Number(priority);
+          setDirty(false);
+          props.onProfileChanged(profile);
+          setErrorMsg("");
+        } catch(e) {
+          setErrorMsg(e as string);
+        }
+      }} okText="Save" title="Profile Settings">
+        <Space direction="vertical" style={{ width: "100%" }}>
+        <Input placeholder="Window Title Regex" value={profile.regex} name="regex" onChange={handleInput} style={{ width: "100%" }}/>
+          <Input.TextArea autoSize placeholder="Definition(s)" value={areaSpecification} onChange={ev => {
+            setAreaSpecification(ev.target.value);
+            setDirty(true);
+          }} style={{ width: "100%" }} />
+          { errorMsg ? <Alert message={errorMsg} type="error" showIcon/> : <></> }
+          <InputNumber placeholder="Priority" value={priority} onChange={value => {setPriority(value ?? ""); setDirty(true);}}
+            style={{ width: "100%" }}/>
+        </Space>
+      </Modal>
     </>
   );
 }

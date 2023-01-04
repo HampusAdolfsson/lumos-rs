@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { ProfileCategory } from './ProfileCategory';
-import { Button, Divider, TableContainer, Toolbar, Table, TableBody, Paper } from '@mui/material';
-import AddIcon from '@mui/icons-material/Add'
 import { IProfileCategory } from './Profile';
 import { ProfilesService } from './ProfilesService';
+import { Button, Card, Space, Switch, Table, TableColumnsType } from 'antd';
+import { PlusOutlined } from '@ant-design/icons';
+import ProfileCategoryEntryActions from './ProfileCategoryEntryActions';
 
 export function ProfilesScene() {
   const [categories, setCategories] = useState([] as Array<IProfileCategory>);
@@ -18,44 +19,60 @@ export function ProfilesScene() {
     };
   }, []);
 
-  const categoryComponents = categories.map((category, i) => {
-    return <>
-      <ProfileCategory key={category.name} category={category} activeProfiles={activeProfiles}
-        onCategoryChanged={async cat => {
+  const columns: TableColumnsType<IProfileCategory> = [
+    {
+      key: "name",
+      render: (_, category, i) => (<Space>
+        <span>{category.name}</span>
+        <Switch size="small" checked={category.enabled} onChange={async checked => {
+          const newCategory = JSON.parse(JSON.stringify(category));
+          newCategory.enabled = checked;
           const newCats: IProfileCategory[] = JSON.parse(JSON.stringify(categories));
-          newCats[i] = cat;
+          newCats[i] = newCategory;
           (await ProfilesService.Instance()).setProfiles(newCats);
           setCategories(newCats);
-        }}
-        onCategoryDeleted={async() => {
+        }}/>
+      </Space>),
+    },
+    {
+      key: "size",
+      render: (_, category) => (<>{category.profiles.length} profile(s)</>)
+    },
+    {
+      key: "actions",
+      align: "right",
+      render: (_, category, i) => (<ProfileCategoryEntryActions category={category} onCategoryDeleted={async() => {
           const newCats: IProfileCategory[] = JSON.parse(JSON.stringify(categories));
           newCats.splice(i, 1);
           (await ProfilesService.Instance()).setProfiles(newCats);
           setCategories(newCats);
-        }}
-        />
-    </>
-  });
-
-  return (
-    <TableContainer component={Paper}>
-      <Table>
-        <TableBody>
-          {categoryComponents}
-        </TableBody>
-      </Table>
-      <Divider/>
-      <Toolbar>
-        <Button color="primary" variant="outlined" disableElevation sx={{ marginRight: 10 }} startIcon={<AddIcon />}
-        onClick={async() => {
-        const newCats = categories.concat([JSON.parse(JSON.stringify(defaultCategory))]);
+      }} onCategoryChanged={async(cat) => {
+        const newCats: IProfileCategory[] = JSON.parse(JSON.stringify(categories));
+        newCats[i] = cat;
         (await ProfilesService.Instance()).setProfiles(newCats);
         setCategories(newCats);
-        }}>
-        Add Category
-        </Button>
-      </Toolbar>
-    </TableContainer>
+      }}/>),
+    }
+  ];
+
+  const expandedRowRender = (category: IProfileCategory, i: number) => (
+        <ProfileCategory category={category} onCategoryChanged={async category => {
+          const newCats: IProfileCategory[] = JSON.parse(JSON.stringify(categories));
+          newCats[i] = category;
+          (await ProfilesService.Instance()).setProfiles(newCats);
+          setCategories(newCats);
+        }}/>
+      );
+
+  return (
+    <Card style={{ background: "#ffffff11" }} title="Profile Categories" extra={<Button type="primary" icon={<PlusOutlined/>} onClick={async() => {
+      const newCats = categories.concat([JSON.parse(JSON.stringify(defaultCategory))]);
+      (await ProfilesService.Instance()).setProfiles(newCats);
+      setCategories(newCats);
+    }}>Add</Button>}>
+      <Table dataSource={categories.map((cat, i) => { return {...cat, key: i}; })} columns={columns}
+        pagination={false} showHeader={false} expandable={{ expandedRowRender }} />
+    </Card>
   );
 }
 

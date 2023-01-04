@@ -1,105 +1,94 @@
-import React from 'react';
+import React, { useState,useEffect } from 'react';
 import { render } from 'react-dom';
 
-import '@fontsource/roboto/300.css';
-import '@fontsource/roboto/400.css';
-import '@fontsource/roboto/500.css';
-import '@fontsource/roboto/700.css';
-import { CssBaseline, AppBar, Alert, Tabs, Tab, Typography, ThemeProvider } from '@mui/material';
 import { DevicesScene } from './devices/DevicesScene';
 import { AboutScene } from './AboutScene';
+import appIcon from './assets/icon.png';
 
+import 'normalize.css'
 import './styles/Global.css';
 import { ProfilesScene } from './profiles/ProfilesScene';
 import { WebsocketService } from './WebsocketService';
-import { Cast, Crop, Info } from '@mui/icons-material';
-import { createTheme } from '@mui/material/styles';
+import { InfoCircleTwoTone, FilterTwoTone, AlertTwoTone } from "@ant-design/icons"
 import { appWindow } from "@tauri-apps/api/window";
 import { UnlistenFn } from "@tauri-apps/api/event";
+import { Layout, Menu, App as AntApp, ConfigProvider, theme, Divider, Alert } from "antd";
+import { purple } from '@ant-design/colors';
+const { Sider, Header, Content } = Layout;
+const { useToken } = theme;
 
 const mainElement = document.createElement('div');
 mainElement.setAttribute('id', 'root');
 document.body.appendChild(mainElement);
 
-let theme = createTheme({
-  palette: {
-    mode: 'dark',
-    primary: {
-      main: '#ffb300',
-    },
-    secondary: {
-      main: '#ab47bc',
-    },
-  }
-});
+function App() {
+  const [scene, setScene] = useState("devices");
+  const [showBackendError, setShowBackendError] = useState(false);
 
-interface State {
-  visibleScene: number;
-  showBackendError: boolean;
-  tabValue: number;
-}
-
-class App extends React.Component<{}, State> {
-
-  constructor(props: {}) {
-    super(props);
-    this.state = {
-      visibleScene: 0,
-      showBackendError: false,
-      tabValue: 0,
-    };
+  useEffect(() => {
     WebsocketService.Instance.connected.then(connected => {
       if (!connected) {
-        this.setState({
-          showBackendError: true,
-        });
+        setShowBackendError(true);
       }
     });
-  }
-
-  setScene(i: number) {
-    this.setState({
-      visibleScene: i,
-    });
-  }
-
-  private unlisten: UnlistenFn | undefined = undefined;
-  componentDidMount() {
+  }, []);
+  useEffect(() => {
+    let unlisten: UnlistenFn | undefined = undefined;
     appWindow.onCloseRequested(async() => {
-        WebsocketService.Instance.sendMessage("shutdown", {});
-    }).then(ul => this.unlisten = ul);
-  }
-  componentWillUnmount(): void {
-    this.unlisten?.();
-  }
+      WebsocketService.Instance.sendMessage("shutdown", {});
+    }).then(ul => unlisten = ul);
+    return () => unlisten?.();
+  }, []);
 
-  render() {
-    const value = this.state.tabValue;
-    return (
-      <>
-        <ThemeProvider theme={theme} >
-          <CssBaseline />
-          <AppBar position="sticky" color="default">
-            <Typography variant="h4" color="textSecondary" style={{position: "fixed", top: 15, left: 20 }}>lumos-rs</Typography>
-            <Tabs value={value} onChange={(_, val) => { this.setState({tabValue: val}); }} centered
-                  indicatorColor="primary"
-                  textColor="primary" >
-              <Tab icon={<Cast/>} label="Devices" />
-              <Tab icon={<Crop/>} label="Profiles" />
-              <Tab icon={<Info/>} label="About" />
-            </Tabs>
-          </AppBar>
-          <div className="scene">
-            {this.state.showBackendError && <Alert severity="error" variant="filled" style={{ marginBottom: 20 }}>
-              Unable to connect to backend. Try restarting the application.</Alert>}
-            {value == 0 && <DevicesScene/>}
-            {value == 1 && <ProfilesScene/>}
-            {value == 2 && <AboutScene/>}
-          </div>
-        </ThemeProvider>
-      </>
-    );
-  }
+  const colors = {
+    primary: purple.primary,
+    bgBase: "#ffffff00",
+  };
+
+  const { token: defaultToken } = useToken();
+  return (
+    <ConfigProvider theme={{
+      algorithm: theme.darkAlgorithm,
+      token: {
+        colorPrimary: colors.primary,
+        colorBgLayout: "#00000000",
+        borderRadius: 4,
+        colorLink: colors.primary
+      },
+      components: {
+        Segmented: {
+          colorBgLayout: "black",
+        }
+      }
+    }}>
+      <AntApp className='fill-vertical'>
+        <Layout className='fill-vertical' style={{backgroundColor: "#000000df"}}>
+          <Header style={{ background: colors.bgBase }}>
+            <img src={appIcon} style={{ width: 64, height: 64 }}/>
+            <span style={{fontSize: "24px", color: "white", position: "absolute" }}>lumos-rs</span>
+          </Header>
+          <Divider style={{ margin: 0, backgroundColor: defaultToken.colorBorder }}/>
+          <Layout className='fill-vertical'>
+            <Sider className='fill-vertical' style={{ background: colors.bgBase }}>
+              <Menu style={{ background: "none", border: "none" }} mode="inline" selectedKeys={[scene]} items={[
+                { label: "Devices",  key: "devices", icon: React.createElement(AlertTwoTone, { twoToneColor: "salmon" }) },
+                { label: "Profiles", key: "profiles", icon: React.createElement(FilterTwoTone, { twoToneColor: "moccasin" }) },
+                { label: "About",    key: "about", icon: React.createElement(InfoCircleTwoTone, { twoToneColor: "#6666ff" }) },
+              ]} onSelect={info => setScene(info.key)}
+              />
+            </Sider>
+            <Content className="scene" style={{ backgroundColor: colors.bgBase }}>
+              {showBackendError && <Alert type="error" showIcon style={{ marginBottom: 20 }}
+                message="Unable to connect to backend. Try restarting the application." />}
+              {scene === "devices"  && <DevicesScene/>}
+              {scene === "profiles" && <ProfilesScene/>}
+              {scene === "about"     && <AboutScene/>}
+            </Content>
+          </Layout>
+        </Layout>
+      </AntApp>
+    </ConfigProvider>
+  );
 }
 
 render(<App />, mainElement);

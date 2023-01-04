@@ -1,0 +1,11 @@
+.form-row {
+    display: flex;
+    margin-bottom: 5px;
+}
+.form-row > * {
+    flex: 1;
+}
+.form-row > *:first-child {
+    margin-right: 20px;
+    /* text-align: right; */
+}

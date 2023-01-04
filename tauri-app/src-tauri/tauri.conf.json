@@ -17,6 +17,9 @@
           "$APPDATA/*", "$APPDATA"
         ]
       },
+      "shell": {
+        "open": true
+      },
       "path": {
         "all": true
       },
@@ -67,10 +70,10 @@
     "windows": [
       {
         "fullscreen": false,
-        "height": 600,
+        "height": 620,
         "resizable": true,
         "title": "lumos-rs",
-        "width": 800
+        "width": 1200
       }
     ]
   }
