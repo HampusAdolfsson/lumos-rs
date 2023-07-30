@@ -5,6 +5,9 @@ use std::net;
 use crate::common::RgbVec;
 use crate::render_service::RenderOutput;
 
+const QMK_HID_USAGE_PAGE: u16 = 0xFF60;
+const QMK_HID_USAGE: u16      = 0x61;
+
 /// A network device running WLED (<https://kno.wled.ge/>).
 pub struct WledRenderOutput {
     size: usize,
@@ -71,7 +74,13 @@ impl QmkRenderOutput {
         info!("Creating QMK output of size {} for VID({:#x}) PID({:#x})", size, vendor_id, product_id);
         let guard = API.lock().unwrap();
         let api = guard.as_ref().map_err(SimpleError::from)?;
-        let device = api.open(vendor_id, product_id).map_err(SimpleError::from)?;
+        let device_info = api.device_list()
+            .find(|dev| dev.vendor_id() == vendor_id &&
+                dev.product_id() == product_id &&
+                dev.usage_page() == QMK_HID_USAGE_PAGE &&
+                dev.usage() == QMK_HID_USAGE)
+            .ok_or(SimpleError::new("No such device"))?;
+        let device = device_info.open_device(api).map_err(SimpleError::from)?;
 
         let mut output_buffer = vec![0u8; 3 + 3*size];
         output_buffer[0] = 0;
