@@ -39,7 +39,9 @@ impl FocusedWindowListener {
             let title_str = {
                 let mut title = vec![0u8; 256];
                 unsafe { GetWindowTextA(hwnd, title.as_mut_slice()); }
-                String::from_utf8_lossy(&title).to_string()
+                let str = String::from_utf8_lossy(&title).to_string();
+                let nul_index = str.find('\0').unwrap();
+                str[0..nul_index].to_string()
             };
             trace!("Window: {}", &title_str);
             if title_str.is_empty() || title_str.eq("Task Switching") || title_str.eq("Search") {
