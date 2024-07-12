@@ -3,7 +3,7 @@ use byteorder::{NativeEndian, ByteOrder};
 use log::{debug, error, info};
 use tokio_util::sync::CancellationToken;
 use wasapi::{Direction, ShareMode, SampleType, Handle, AudioCaptureClient, WaveFormat};
-use tokio::sync::{watch, oneshot, mpsc};
+use tokio::sync::{watch, mpsc};
 use wave_to_intensity::WaveToIntensityConverter;
 
 mod audio_sink;
@@ -64,7 +64,7 @@ fn capture_audio(
 ) -> std::thread::JoinHandle<()> {
     std::thread::Builder::new().name("AudioCapture".to_string()).spawn(move || {
         let task = async move {
-            if let Err(e) = wasapi::initialize_sta() {
+            if let Err(e) = wasapi::initialize_sta().ok() {
                 error!("Failed to perform COM initialization: {}", e);
                 return;
             }
@@ -81,7 +81,7 @@ fn capture_audio(
                     }
                 }
                 while is_running && !cancel_token.is_cancelled() {
-                    let capture_res = capture_data.capture_client.read_from_device(capture_data.blockalign as usize, &mut capture_data.raw_buffer);
+                    let capture_res = capture_data.capture_client.read_from_device(&mut capture_data.raw_buffer);
                     if let Ok(res) = capture_res
                     {
                         let float_slice = &mut capture_data.float_buffer[0..(res.0 as usize * capture_data.format.get_nchannels() as usize)];
@@ -128,7 +128,6 @@ fn capture_audio(
 struct AudioCaptureData {
     capture_client: AudioCaptureClient,
     format: WaveFormat,
-    blockalign: u32,
     h_event: Handle,
     raw_buffer: Vec<u8>,
     float_buffer: Vec<f32>,
@@ -149,7 +148,7 @@ fn initialize(buffers_per_sec: usize) -> Result<AudioCaptureData, Box<dyn std::e
 
     let mut audio_client = device.get_iaudioclient().unwrap();
 
-    let desired_format = wasapi::WaveFormat::new(32, 32, &SampleType::Float, 44100, 2);
+    let desired_format = wasapi::WaveFormat::new(32, 32, &SampleType::Float, 44100, 2, None);
     audio_client.initialize_client(
         &desired_format,
         REFTIMES_PER_SEC / buffers_per_sec as i64,
@@ -163,7 +162,6 @@ fn initialize(buffers_per_sec: usize) -> Result<AudioCaptureData, Box<dyn std::e
     let raw_buffer: Vec<u8> = vec![0u8; buffer_size * std::mem::size_of::<f32>()];
     let float_buffer: Vec<f32> = vec![0.0; buffer_size];
     debug!("Our buffer size: {} samples; WASAPI buffer size: {}", buffer_size, audio_client.get_bufferframecount().unwrap() * format.get_nchannels() as u32);
-    let blockalign = format.get_blockalign();
 
     let sink = audio_sink::AudioSink::new(buffer_size);
     let converter = wave_to_intensity::WaveToIntensityConverter::new(buffer_size, format.get_nchannels() as usize).unwrap();
@@ -175,7 +173,6 @@ fn initialize(buffers_per_sec: usize) -> Result<AudioCaptureData, Box<dyn std::e
     Ok(AudioCaptureData {
         capture_client,
         format,
-        blockalign,
         h_event,
         raw_buffer,
         float_buffer,
