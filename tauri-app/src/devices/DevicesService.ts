@@ -14,22 +14,22 @@ export class DevicesService {
 
   public static async Instance() {
     if (!this.instance) {
-      await this.LoadAndInstantiate();
+      this.instance = this.LoadAndInstantiate();
     }
-    return this.instance!;
+    return this.instance;
   }
 
   public static async LoadAndInstantiate() {
     const saveFile = await this.saveFile();
     if (await Fs.exists(saveFile)) {
       const devices = JSON.parse(await Fs.readTextFile(saveFile));
-      this.instance = new DevicesService(devices);
+      return new DevicesService(devices);
     } else {
-      this.instance = new DevicesService([]);
+      return new DevicesService([]);
     }
   }
 
-  private static instance: DevicesService | undefined;
+  private static instance: Promise<DevicesService> | undefined = undefined;
 
   public readonly devices: BehaviorSubject<IExtendedDeviceSpecification[]>;
 

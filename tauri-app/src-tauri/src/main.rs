@@ -8,7 +8,12 @@ use std::process::{self, Stdio};
 use std::sync::{Arc, Mutex};
 
 use once_cell::sync::Lazy;
-use tauri::WindowEvent;
+use tauri::Manager;
+use tauri::{RunEvent,WindowEvent};
+use tauri::SystemTray;
+use tauri::{CustomMenuItem, SystemTrayMenu, SystemTrayMenuItem, SystemTrayEvent};
+
+use tungstenite::{Message, connect};
 
 /// Stores all stdout contents from the backend process
 static BACKEND_OUTPUT: Lazy<Mutex<String>> = Lazy::new(|| { Mutex::new(String::new()) });
@@ -20,10 +25,57 @@ fn get_backend_logs() -> String {
 }
 
 fn main() {
+    let tray_menu = {
+        let open = CustomMenuItem::new("open".to_string(), "Open");
+        let quit = CustomMenuItem::new("quit".to_string(), "Quit");
+        SystemTrayMenu::new()
+            .add_item(open)
+            .add_native_item(SystemTrayMenuItem::Separator)
+            .add_item(quit)
+    };
+    let tray = SystemTray::new()
+        .with_menu(tray_menu);
+
     let backend: Arc<Mutex<Option<process::Child>>> = Arc::new(Mutex::new(None));
 
     let backend2 = backend.clone();
     tauri::Builder::default()
+        .system_tray(tray)
+        .on_system_tray_event(move |app, event| match event {
+            SystemTrayEvent::DoubleClick {
+                position: _,
+                size: _,
+                ..
+            } => {
+                let window = app.get_window("main").unwrap();
+                window.show().unwrap();
+            }
+            SystemTrayEvent::MenuItemClick { id, .. } => {
+              match id.as_str() {
+                "quit" => {
+                    match connect("ws://localhost:9901") {
+                        Ok((mut socket, _)) => {
+                            socket.write_message(Message::Text(r#"{ "subject": "shutdown" }"#.into())).unwrap();
+                            socket.close(None).unwrap();
+                            println!("Waiting for backend to exit...");
+                            backend.lock().unwrap().take().unwrap().wait().unwrap();
+                        },
+                        Err(_) => {
+                            // Can't send shutdown message, so just force kill the backend
+                            backend.lock().unwrap().take().unwrap().kill().unwrap();
+                        }
+                    }
+                    app.exit(0);
+                }
+                "open" => {
+                    let window = app.get_window("main").unwrap();
+                    window.show().unwrap();
+                }
+                _ => {}
+              }
+            }
+            _ => {}
+        })
         .setup(move |app| {
             let backend_path = app.path_resolver()
                 .resolve_resource("backend/lumos-rs-x86_64-pc-windows-msvc.exe")
@@ -50,12 +102,17 @@ fn main() {
             Ok(())
         })
         .on_window_event(move |ev| {
-            if let WindowEvent::CloseRequested{ .. } = ev.event() {
-                backend.lock().unwrap().take().unwrap().wait().unwrap();
+            if let WindowEvent::CloseRequested{ api, .. } = ev.event() {
+                api.prevent_close();
+                ev.window().hide().unwrap();
             }
         })
         .invoke_handler(tauri::generate_handler![get_backend_logs])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("Error building tauri app")
+        .run(|_app, event| match event {
+            RunEvent::ExitRequested { api, .. } => api.prevent_exit(),
+            _ => (),
+        });
 
 }

@@ -14,6 +14,8 @@ import { appWindow } from "@tauri-apps/api/window";
 import { UnlistenFn } from "@tauri-apps/api/event";
 import { Layout, Menu, App as AntApp, ConfigProvider, theme, Divider, Alert } from "antd";
 import { purple } from '@ant-design/colors';
+import { ProfilesService } from './profiles/ProfilesService';
+import { DevicesService } from './devices/DevicesService';
 const { Sider, Header, Content } = Layout;
 const { useToken } = theme;
 
@@ -33,11 +35,9 @@ function App() {
     });
   }, []);
   useEffect(() => {
-    let unlisten: UnlistenFn | undefined = undefined;
-    appWindow.onCloseRequested(async() => {
-      WebsocketService.Instance.sendMessage("shutdown", {});
-    }).then(ul => unlisten = ul);
-    return () => unlisten?.();
+    // hacky way to force services to initialize on startup
+    ProfilesService.Instance();
+    DevicesService.Instance();
   }, []);
 
   const colors = {

@@ -11,9 +11,9 @@ export class ProfilesService {
 
   public static async Instance() {
     if (!this.instance) {
-      await this.LoadAndInstantiate();
+      this.instance = this.LoadAndInstantiate();
     }
-    return this.instance!;
+    return this.instance;
   }
 
   public static async LoadAndInstantiate() {
@@ -37,10 +37,10 @@ export class ProfilesService {
     if (await Fs.exists(idSaveFile)) {
       nextId = JSON.parse(await Fs.readTextFile(idSaveFile)).nextId;
     }
-    this.instance = new ProfilesService(profiles, nextId);
+    return new ProfilesService(profiles, nextId);
   }
 
-  private static instance: ProfilesService | undefined;
+  private static instance: Promise<ProfilesService> | undefined = undefined;
 
   public readonly categories: BehaviorSubject<IProfileCategory[]>;
   public readonly activeProfiles = new BehaviorSubject<Map<number, number>>(new Map());

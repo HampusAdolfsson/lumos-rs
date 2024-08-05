@@ -64,6 +64,9 @@
     "security": {
       "csp": null
     },
+    "systemTray": {
+      "iconPath": "icons/icon.png"
+    },
     "updater": {
       "active": false
     },
@@ -71,9 +74,10 @@
       {
         "fullscreen": false,
         "height": 620,
+        "width": 1200,
         "resizable": true,
         "title": "lumos-rs",
-        "width": 1200
+        "visible": false
       }
     ]
   }
