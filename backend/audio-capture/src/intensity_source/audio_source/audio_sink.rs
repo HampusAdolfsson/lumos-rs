@@ -23,6 +23,12 @@ impl AudioSink {
         }
     }
 
+
+    /// Gets the size of the buffers (iterators) returned from [Self::receive_samples].
+    pub fn size(&self) -> usize {
+        self.output_size
+    }
+
     /// Stores samples in the internal buffer, returning an iterator if enough samples have been buffered.
     ///
     /// This function will collect samples, returning [None], until it has received [Self::output_buffer_size] samples.

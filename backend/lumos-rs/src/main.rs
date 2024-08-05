@@ -27,6 +27,8 @@ mod config {
 	pub const DEFAULT_CAPTURE_REGION_HOR: Rect = Rect{ left: 0, top: 840, width: 2560, height: 600 };
     /// The region of monitor 0 to capture for vertical samplers when no profile is active.
 	pub const DEFAULT_CAPTURE_REGION_VER: Rect = Rect{ left: 0, top: 0, width: 400, height: 1440 };
+
+    pub const AUDIO_DEVICES: [&'static str; 2] = ["Voicemeeter Input", "Focusrite"];
 }
 
 #[tokio::main]
@@ -53,7 +55,8 @@ async fn main() {
 
     let mut render_service = render_service::RenderService::new(config::DESKTOP_CAPTURE_FPS,
         config::DEFAULT_CAPTURE_REGION_HOR,
-        config::DEFAULT_CAPTURE_REGION_VER);
+        config::DEFAULT_CAPTURE_REGION_VER,
+        config::AUDIO_DEVICES.iter().map(|dev| dev.to_string()).collect());
     // The main loop handles messages from the websocket server, the profile listener and the ctrl-c signal
     loop {
         tokio::select! {

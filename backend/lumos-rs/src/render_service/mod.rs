@@ -37,9 +37,9 @@ pub struct RenderService {
 }
 
 impl RenderService {
-    pub fn new(desktop_capture_fps: f32, default_capture_region_hor: Rect, default_capture_region_ver: Rect) -> Self {
+    pub fn new(desktop_capture_fps: f32, default_capture_region_hor: Rect, default_capture_region_ver: Rect, audio_device: Vec<String>) -> Self {
         let (frame_capturer, frame_rx) = desktop_capture::DesktopCaptureController::new(desktop_capture_fps, crate::config::DESKTOP_CAPTURE_DECIMATION);
-        let (audio_capturer, audio_rx) = audio_capture::AudioCaptureController::new();
+        let (audio_capturer, audio_rx) = audio_capture::AudioCaptureController::new(audio_device);
         RenderService{
             running_devices: None,
             frame_capturer,
@@ -69,10 +69,8 @@ impl RenderService {
                 if let Some(region) = profile.actual_vertical_region {
                     device_group.set_vertical_region(region);
                 }
-                self.audio_capturer.start().await;
                 self.frame_capturer.start().await;
             } else {
-                self.audio_capturer.stop().await;
                 self.frame_capturer.stop().await;
                 device_group.set_horizontal_region(self.default_capture_region_horizontal);
                 device_group.set_vertical_region(self.default_capture_region_vertical);
