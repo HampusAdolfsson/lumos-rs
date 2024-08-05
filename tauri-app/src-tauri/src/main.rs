@@ -77,28 +77,31 @@ fn main() {
             _ => {}
         })
         .setup(move |app| {
-            let backend_path = app.path_resolver()
-                .resolve_resource("backend/lumos-rs-x86_64-pc-windows-msvc.exe")
-                .expect("Failed to locate backend executable");
+            #[cfg(not(debug_assertions))]
+            {
+                let backend_path = app.path_resolver()
+                    .resolve_resource("backend/lumos-rs-x86_64-pc-windows-msvc.exe")
+                    .expect("Failed to locate backend executable");
 
-            let mut backend_proc = process::Command::new(backend_path)
-                .stdout(Stdio::piped())
-                .env("NO_COLOR", "true")
-                .spawn().expect("Failed to spawn backend process");
-            let mut stdout = backend_proc.stdout.take().unwrap();
-            std::thread::spawn(move || {
-                let mut buf = vec![0u8; 256];
-                loop {
-                    match stdout.read(&mut buf) {
-                        Ok(len) => {
-                            let mut accumulated_output = BACKEND_OUTPUT.lock().unwrap();
-                            accumulated_output.push_str(&String::from_utf8_lossy(&buf[0..len]));
-                        },
-                        Err(_) => break,
+                let mut backend_proc = process::Command::new(backend_path)
+                    .stdout(Stdio::piped())
+                    .env("NO_COLOR", "true")
+                    .spawn().expect("Failed to spawn backend process");
+                let mut stdout = backend_proc.stdout.take().unwrap();
+                std::thread::spawn(move || {
+                    let mut buf = vec![0u8; 256];
+                    loop {
+                        match stdout.read(&mut buf) {
+                            Ok(len) => {
+                                let mut accumulated_output = BACKEND_OUTPUT.lock().unwrap();
+                                accumulated_output.push_str(&String::from_utf8_lossy(&buf[0..len]));
+                            },
+                            Err(_) => break,
+                        }
                     }
-                }
-            });
-            *backend2.lock().unwrap() = Some(backend_proc);
+                });
+                *backend2.lock().unwrap() = Some(backend_proc);
+            }
             Ok(())
         })
         .on_window_event(move |ev| {
