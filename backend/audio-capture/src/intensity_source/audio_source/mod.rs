@@ -1,5 +1,6 @@
 use byteorder::{ByteOrder, NativeEndian};
 use log::{debug, info};
+use simple_error::{SimpleError, SimpleResult};
 use tokio::sync::mpsc;
 use tokio_util::sync::CancellationToken;
 use wasapi::{AudioCaptureClient, Direction, Handle, SampleType, ShareMode, WaveFormat};
@@ -33,18 +34,18 @@ impl AudioCapturer {
     pub async fn start(
         device_name: &str,
         cancel_token: CancellationToken,
-    ) -> (Self, mpsc::Receiver<AudioCaptureEvent>) {
+    ) -> SimpleResult<(Self, mpsc::Receiver<AudioCaptureEvent>)> {
         let (tx, rx) = mpsc::channel(64);
         let (handle, buffer_size, n_channels) =
-            launch_worker(device_name.to_string(), BUFFERS_PER_SEC, tx, cancel_token).await;
-        (
+            launch_worker(device_name.to_string(), BUFFERS_PER_SEC, tx, cancel_token).await?;
+        Ok((
             AudioCapturer {
                 worker_thread: handle,
                 buffer_size,
                 n_channels,
             },
             rx,
-        )
+        ))
     }
 
     pub fn buffer_size(&self) -> usize {
@@ -66,7 +67,7 @@ async fn launch_worker(
     buffers_per_sec: usize,
     tx: mpsc::Sender<AudioCaptureEvent>,
     cancel_token: CancellationToken,
-) -> (std::thread::JoinHandle<()>, usize, u16) {
+) -> SimpleResult<(std::thread::JoinHandle<()>, usize, u16)> {
     let (stats_tx, stats_rx) = tokio::sync::oneshot::channel();
     let handle = std::thread::Builder::new()
         .name(format!("Audio capture - {}", &device_name))
@@ -76,7 +77,13 @@ async fn launch_worker(
                 return;
             }
 
-            let mut capture_data = AudioCaptureData::new(&device_name, buffers_per_sec).unwrap();
+            let mut capture_data = match AudioCaptureData::new(&device_name, buffers_per_sec) {
+                Some(cap) => cap,
+                None => {
+                    log::warn!("Failed to open '{}'", device_name);
+                    return;
+                }
+            };
             stats_tx
                 .send((
                     capture_data.sink.size(),
@@ -93,7 +100,7 @@ async fn launch_worker(
                 match capture_res {
                     Ok((0, _)) => {
                         // empty buffer, no audio is playing
-                    },
+                    }
                     Ok((buf_size, _)) => {
                         if !is_active {
                             is_active = true;
@@ -123,7 +130,7 @@ async fn launch_worker(
                                 break;
                             }
                         }
-                    },
+                    }
                     Err(err) => {
                         log::error!("Audio: {:?}", err);
                         return;
@@ -150,8 +157,10 @@ async fn launch_worker(
         })
         .unwrap(); // Thread end
 
-    let (buffer_size, n_channels) = stats_rx.await.unwrap();
-    (handle, buffer_size, n_channels)
+    let (buffer_size, n_channels) = stats_rx
+        .await
+        .or(Err(SimpleError::new("Failed to open device")))?;
+    Ok((handle, buffer_size, n_channels))
 }
 
 /// All data needed to run the worker thread
@@ -166,7 +175,7 @@ pub struct AudioCaptureData {
 
 impl AudioCaptureData {
     pub fn new(device_name: &str, buffers_per_sec: usize) -> Option<Self> {
-        let mut device = wasapi::DeviceCollection::new(&Direction::Render)
+        let device = wasapi::DeviceCollection::new(&Direction::Render)
             .unwrap()
             .into_iter()
             .find(|device| {
@@ -176,7 +185,8 @@ impl AudioCaptureData {
                         .map_or(false, |name| name.contains(device_name));
                 }
                 return false;
-            })?.unwrap();
+            })?
+            .unwrap();
         info!(
             "Opened playback device: {}",
             device

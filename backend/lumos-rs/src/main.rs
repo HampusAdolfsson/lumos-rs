@@ -1,5 +1,5 @@
-#![windows_subsystem = "windows"]
-#![feature(result_option_inspect, let_chains, test)]
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+#![feature(let_chains, test, trait_alias)]
 #![allow(clippy::needless_return)]
 use log::{info, warn};
 use futures::StreamExt;
@@ -21,14 +21,12 @@ mod config {
     use crate::common::Rect;
     pub const MONITORS: [Rect; 2] = [
         Rect{ left: 0, top: -8, width: 2560, height: 1440 },
-        Rect{ left: 2560, top: 148, width: 1920, height: 1080 },
+        Rect{ left: -1920, top: 0, width: 1920, height: 1080 },
     ];
     /// The region of monitor 0 to capture for horizontal samplers when no profile is active.
 	pub const DEFAULT_CAPTURE_REGION_HOR: Rect = Rect{ left: 0, top: 840, width: 2560, height: 600 };
     /// The region of monitor 0 to capture for vertical samplers when no profile is active.
 	pub const DEFAULT_CAPTURE_REGION_VER: Rect = Rect{ left: 0, top: 0, width: 400, height: 1440 };
-
-    pub const AUDIO_DEVICES: [&'static str; 2] = ["Voicemeeter Input", "Focusrite"];
 }
 
 #[tokio::main]
@@ -55,8 +53,7 @@ async fn main() {
 
     let mut render_service = render_service::RenderService::new(config::DESKTOP_CAPTURE_FPS,
         config::DEFAULT_CAPTURE_REGION_HOR,
-        config::DEFAULT_CAPTURE_REGION_VER,
-        config::AUDIO_DEVICES.iter().map(|dev| dev.to_string()).collect());
+        config::DEFAULT_CAPTURE_REGION_VER);
     // The main loop handles messages from the websocket server, the profile listener and the ctrl-c signal
     loop {
         tokio::select! {
@@ -70,6 +67,10 @@ async fn main() {
                         websocket::Frame::Profiles(profs) => {
                             info!("Received {} profile(s)", profs.len());
                             profile_listener.set_profiles(profs);
+                        },
+                        websocket::Frame::AudioDevices(audio_devs) => {
+                            info!("Received {} audio device(s)", audio_devs.len());
+                            render_service.set_audio_devices(audio_devs);
                         },
                         websocket::Frame::Shutdown => {
                             shutdown.cancel();

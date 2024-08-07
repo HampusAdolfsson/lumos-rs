@@ -1,6 +1,6 @@
 use log::debug;
 
-use tokio::sync::{watch, oneshot, mpsc};
+use tokio::sync::{watch, mpsc};
 use tokio_util::sync::CancellationToken;
 
 mod desktop_duplicator;

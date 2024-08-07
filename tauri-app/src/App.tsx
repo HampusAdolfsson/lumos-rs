@@ -2,6 +2,7 @@ import React, { useState,useEffect } from 'react';
 import { render } from 'react-dom';
 
 import { DevicesScene } from './devices/DevicesScene';
+import { SystemScene } from './system/SystemScene';
 import { AboutScene } from './AboutScene';
 import appIcon from './assets/icon.png';
 
@@ -9,13 +10,12 @@ import 'normalize.css'
 import './styles/Global.css';
 import { ProfilesScene } from './profiles/ProfilesScene';
 import { WebsocketService } from './WebsocketService';
-import { InfoCircleTwoTone, FilterTwoTone, AlertTwoTone } from "@ant-design/icons"
-import { appWindow } from "@tauri-apps/api/window";
-import { UnlistenFn } from "@tauri-apps/api/event";
+import { InfoCircleTwoTone, FilterTwoTone, AlertTwoTone, SettingTwoTone } from "@ant-design/icons"
 import { Layout, Menu, App as AntApp, ConfigProvider, theme, Divider, Alert } from "antd";
 import { purple } from '@ant-design/colors';
 import { ProfilesService } from './profiles/ProfilesService';
 import { DevicesService } from './devices/DevicesService';
+import { AudioDevicesService } from './system/AudioDevicesService';
 const { Sider, Header, Content } = Layout;
 const { useToken } = theme;
 
@@ -38,6 +38,7 @@ function App() {
     // hacky way to force services to initialize on startup
     ProfilesService.Instance();
     DevicesService.Instance();
+    AudioDevicesService.Instance();
   }, []);
 
   const colors = {
@@ -73,6 +74,7 @@ function App() {
               <Menu style={{ background: "none", border: "none" }} mode="inline" selectedKeys={[scene]} items={[
                 { label: "Devices",  key: "devices", icon: React.createElement(AlertTwoTone, { twoToneColor: "salmon" }) },
                 { label: "Profiles", key: "profiles", icon: React.createElement(FilterTwoTone, { twoToneColor: "moccasin" }) },
+                { label: "System",   key: "system", icon: React.createElement(SettingTwoTone, { twoToneColor: "darkseagreen" }) },
                 { label: "About",    key: "about", icon: React.createElement(InfoCircleTwoTone, { twoToneColor: "#6666ff" }) },
               ]} onSelect={info => setScene(info.key)}
               />
@@ -82,7 +84,8 @@ function App() {
                 message="Unable to connect to backend. Try restarting the application." />}
               {scene === "devices"  && <DevicesScene/>}
               {scene === "profiles" && <ProfilesScene/>}
-              {scene === "about"     && <AboutScene/>}
+              {scene === "system"   && <SystemScene/>}
+              {scene === "about"    && <AboutScene/>}
             </Content>
           </Layout>
         </Layout>

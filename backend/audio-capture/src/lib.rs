@@ -10,46 +10,52 @@ use crate::intensity_source::IntensitySourceEvent;
 
 mod intensity_source;
 
-// Reftime is the time unit used by wasapi, equal to 100 nanoseconds
-const REFTIMES_PER_SEC: i64 = 10_000_000;
-
 type AudioIntensity = f32;
 
 /// Captures audio data and converts it to a stream of intensity/loudness values.
 ///
 /// Audio stops begin captured when the controller is dropped.
 pub struct AudioCaptureController {
-    worker_thread: Option<std::thread::JoinHandle<()>>,
-    cancel_token: CancellationToken,
+    intensity_tx: watch::Sender<AudioIntensity>,
+    worker_thread: Option<(std::thread::JoinHandle<()>, CancellationToken)>,
 }
 
 impl AudioCaptureController {
     /// Starts a new capture controller, beginning capturing audio data
     /// immediately.
+    pub fn new() -> (Self, watch::Receiver<AudioIntensity>) {
+        let (intensity_tx, intensity_rx) = watch::channel(0.0);
+        let mut controller = AudioCaptureController {
+            intensity_tx,
+            worker_thread: None,
+        };
+        controller.set_audio_devices(vec![]);
+        (controller, intensity_rx)
+    }
+
+    /// Sets the audio devices to capture audio from
     ///
     /// [audio_devices] - A list of device names to capture from. If multiple
     /// devices are given, audio is always taken from the first audio device
     /// that is playing audio at any given moment.
-    pub fn new(audio_devices: Vec<String>) -> (Self, watch::Receiver<AudioIntensity>) {
-        let (intensity_tx, intensity_rx) = watch::channel(0.0);
+    pub fn set_audio_devices(&mut self, audio_devices: Vec<String>) {
+        self.stop_worker();
         let cancel_token = CancellationToken::new();
-        let handle = capture_audio(audio_devices, intensity_tx, cancel_token.clone());
-        (
-            AudioCaptureController {
-                cancel_token,
-                worker_thread: Some(handle),
-            },
-            intensity_rx,
-        )
+        let handle = capture_audio(audio_devices, self.intensity_tx.clone(), cancel_token.clone());
+        self.worker_thread = Some((handle, cancel_token));
+    }
+
+    fn stop_worker(&mut self) {
+        if let Some((handle, cancel_token)) = self.worker_thread.take() {
+            cancel_token.cancel();
+            handle.join().unwrap();
+        }
     }
 }
 
 impl Drop for AudioCaptureController {
     fn drop(&mut self) {
-        self.cancel_token.cancel();
-        if let Some(handle) = self.worker_thread.take() {
-            handle.join().unwrap();
-        }
+        self.stop_worker();
     }
 }
 

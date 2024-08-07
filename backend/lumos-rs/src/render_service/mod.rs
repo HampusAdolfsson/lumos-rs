@@ -37,9 +37,9 @@ pub struct RenderService {
 }
 
 impl RenderService {
-    pub fn new(desktop_capture_fps: f32, default_capture_region_hor: Rect, default_capture_region_ver: Rect, audio_device: Vec<String>) -> Self {
+    pub fn new(desktop_capture_fps: f32, default_capture_region_hor: Rect, default_capture_region_ver: Rect) -> Self {
         let (frame_capturer, frame_rx) = desktop_capture::DesktopCaptureController::new(desktop_capture_fps, crate::config::DESKTOP_CAPTURE_DECIMATION);
-        let (audio_capturer, audio_rx) = audio_capture::AudioCaptureController::new(audio_device);
+        let (audio_capturer, audio_rx) = audio_capture::AudioCaptureController::new();
         RenderService{
             running_devices: None,
             frame_capturer,
@@ -54,6 +54,10 @@ impl RenderService {
 
     pub fn set_devices(&mut self, devices: Vec<DeviceSpecification>) {
         self.running_devices = Some(DeviceCollection::new(devices, &self.frame_stream, &self.audio_stream));
+    }
+
+    pub fn set_audio_devices(&mut self, device_names: Vec<String>) {
+        self.audio_capturer.set_audio_devices(device_names);
     }
 
     pub async fn notify_active_profile(&mut self, active_profile: profiles::ActiveProfileInfo) {

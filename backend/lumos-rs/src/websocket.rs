@@ -2,7 +2,7 @@
 use futures::TryStreamExt;
 use log::{info, debug, warn};
 use tokio::net::{TcpListener, TcpStream};
-use tokio::sync::{broadcast, mpsc};
+use tokio::sync::mpsc;
 use tokio_stream::Stream;
 use tokio_stream::wrappers::ReceiverStream;
 use tokio_util::sync::CancellationToken;
@@ -17,6 +17,7 @@ use crate::profiles::{self, ApplicationProfile};
 pub enum Frame {
     Devices(Vec<DeviceSpecification>),
     Profiles(Vec<profiles::ApplicationProfile>),
+    AudioDevices(Vec<String>),
     Shutdown,
 }
 
@@ -101,6 +102,13 @@ mod deser_types {
         pub px: Option<i32>,
         pub percentage: Option<f32>,
     }
+
+    #[derive(serde::Deserialize)]
+    #[serde(rename_all = "camelCase")]
+    pub struct AudioDevicesMessage {
+        pub subject: String,
+        pub contents: Vec<String>,
+    }
 }
 
 pub async fn run_websocket_server(port: u32, cancel_token: CancellationToken) -> SimpleResult<(impl Future<Output=()>, impl Stream<Item=Frame>)> {
@@ -152,6 +160,15 @@ async fn handle_connection(raw_stream: TcpStream, frame_tx: mpsc::Sender<Frame>,
                 "profiles" => {
                     match serde_json::from_str::<deser_types::ProfileMessage>(&str_msg) {
                         Ok(profile_msg) => Some(handle_profile_message(profile_msg)),
+                        Err(e) => {
+                            warn!("Failed to parse message: {}", e);
+                            None
+                        },
+                    }
+                },
+                "audio-devices" => {
+                    match serde_json::from_str::<deser_types::AudioDevicesMessage>(&str_msg) {
+                        Ok(devices_msg) => Some(handle_audio_devices_message(devices_msg)),
                         Err(e) => {
                             warn!("Failed to parse message: {}", e);
                             None
@@ -294,4 +311,8 @@ fn parse_monitor_distance(distance_raw: &deser_types::MonitorDistance) -> Simple
         }
         Ok(profiles::MonitorDistance::Proportion(percentage))
     }
+}
+
+fn handle_audio_devices_message(msg: deser_types::AudioDevicesMessage) -> Frame {
+    Frame::AudioDevices(msg.contents)
 }

@@ -29,49 +29,50 @@ pub fn capture_intensity_from_audio_device(
     let (intensity_tx, intensity_rx) = tokio::sync::mpsc::channel(64);
     tokio::task::spawn(async move {
         while !cancel_token.is_cancelled() {
-            let (capturer, mut audio_rx) =
-                audio_source::AudioCapturer::start(&device_name, cancel_token.clone()).await;
-            let mut converter = match wave_to_intensity::WaveToIntensityConverter::new(
-                capturer.buffer_size(),
-                capturer.n_channels() as usize,
-            ) {
-                Ok(conv) => conv,
-                Err(e) => {
-                    log::error!(
-                        "Failed to create intensity converter for {}: {}",
-                        device_name,
-                        e
-                    );
-                    return;
-                }
-            };
-
-            while let Some(ev) = audio_rx.recv().await {
-                let done = match ev {
-                    AudioCaptureEvent::PlaybackStarted => intensity_tx
-                        .send(IntensitySourceEvent::Activated)
-                        .await
-                        .is_err(),
-                    AudioCaptureEvent::PlaybackStopped => intensity_tx
-                        .send(IntensitySourceEvent::Deactivated)
-                        .await
-                        .is_err(),
-                    AudioCaptureEvent::BufferProduced(buffer) => {
-                        let intensity = converter.get_intensity(buffer.into_iter());
-                        intensity_tx
-                            .send(IntensitySourceEvent::ValueProduced(intensity))
-                            .await
-                            .is_err()
+            if let Ok((capturer, mut audio_rx)) =
+                audio_source::AudioCapturer::start(&device_name, cancel_token.clone()).await {
+                let mut converter = match wave_to_intensity::WaveToIntensityConverter::new(
+                    capturer.buffer_size(),
+                    capturer.n_channels() as usize,
+                ) {
+                    Ok(conv) => conv,
+                    Err(e) => {
+                        log::error!(
+                            "Failed to create intensity converter for {}: {}",
+                            device_name,
+                            e
+                        );
+                        return;
                     }
                 };
-                if done {
-                    return;
+
+                while let Some(ev) = audio_rx.recv().await {
+                    let done = match ev {
+                        AudioCaptureEvent::PlaybackStarted => intensity_tx
+                            .send(IntensitySourceEvent::Activated)
+                            .await
+                            .is_err(),
+                        AudioCaptureEvent::PlaybackStopped => intensity_tx
+                            .send(IntensitySourceEvent::Deactivated)
+                            .await
+                            .is_err(),
+                        AudioCaptureEvent::BufferProduced(buffer) => {
+                            let intensity = converter.get_intensity(buffer.into_iter());
+                            intensity_tx
+                                .send(IntensitySourceEvent::ValueProduced(intensity))
+                                .await
+                                .is_err()
+                        }
+                    };
+                    if done {
+                        return;
+                    }
                 }
             }
+            // audio_rx ended, probably due to some error. Wait a bit before trying
+            // to reopen the device.
+            tokio::time::sleep(std::time::Duration::from_millis(1000)).await;
         }
-        // audio_rx ended, probably due to some error. Wait a bit before trying
-        // to reopen the device.
-        tokio::time::sleep(std::time::Duration::from_millis(1000)).await;
     });
 
     let stream = tokio_stream::wrappers::ReceiverStream::new(intensity_rx);
