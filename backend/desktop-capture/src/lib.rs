@@ -14,6 +14,12 @@ pub struct DesktopCaptureController {
     monitor_select: mpsc::Sender<u32>,
 }
 
+#[derive(Debug, Clone)]
+pub enum FrameCaptureEvent {
+    Captured(Frame),
+    Stopped,
+}
+
 impl DesktopCaptureController {
     /// Creates a new capture controller. It will generate `fps` frames each second. The width and height of each
     /// frame is equal to the monitor width/height divided by (1 << `decimation_amount`).
@@ -27,8 +33,8 @@ impl DesktopCaptureController {
     /// The `watch` type is useful here because it doesn't buffer values; it only ever shows the *latest* value.
     /// This saves new listeners from seeing all previous values, and also prevents memory buildup when a listener
     /// processes frames slower than they are produced.
-    pub fn new(fps: f32, decimation_amount: u32) -> (Self, watch::Receiver<Frame>) {
-        let (frame_tx, frame_rx) = watch::channel(Frame{buffer: Vec::new(), height: 0, width: 0, downscaling: 1});
+    pub fn new(fps: f32, decimation_amount: u32) -> (Self, watch::Receiver<FrameCaptureEvent>) {
+        let (frame_tx, frame_rx) = watch::channel(FrameCaptureEvent::Stopped);
         let (monitor_select_tx, monitor_select_rx) = mpsc::channel(8);
         let cancel_token = CancellationToken::new();
         let (running_tx, running_rx) = mpsc::channel(2);
@@ -71,7 +77,7 @@ impl Drop for DesktopCaptureController {
 fn capture_desktop_frames(
     fps: f32,
     decimation_amount: u32,
-    frames_tx: watch::Sender<Frame>,
+    frames_tx: watch::Sender<FrameCaptureEvent>,
     mut monitor_index: mpsc::Receiver<u32>,
     cancel_token: CancellationToken,
     mut running_rx: mpsc::Receiver<bool>,
@@ -107,7 +113,7 @@ fn capture_desktop_frames(
                             };
                             // Always send a frame if possible
                             if let Some(frame) = last_frame.as_ref() {
-                                if frames_tx.send(frame.clone()).is_err() {
+                                if frames_tx.send(FrameCaptureEvent::Captured(frame.clone())).is_err() {
                                     // All receivers have been dropped
                                     break;
                                 }
@@ -124,6 +130,11 @@ fn capture_desktop_frames(
                         },
                         Some(value) = running_rx.recv() => is_running = value,
                     }
+                }
+
+                if frames_tx.send(FrameCaptureEvent::Stopped).is_err() {
+                    // All receivers have been dropped
+                    break;
                 }
             }
         };

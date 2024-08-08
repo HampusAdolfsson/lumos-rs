@@ -22,7 +22,7 @@ impl DeviceCollection {
     /// Creates a new [DeviceCollection] from a set of devices.
     ///
     /// The devices are started when this function is called, and are run until the [DeviceCollection] is dropped.
-    pub fn new(devices: Vec<DeviceSpecification>, frames: &watch::Receiver<desktop_capture::Frame>, audio: &watch::Receiver<f32>) -> Self where
+    pub fn new(devices: Vec<DeviceSpecification>, frames: &watch::Receiver<desktop_capture::FrameCaptureEvent>, audio: &watch::Receiver<f32>) -> Self where
     {
         let (hor_region_tx, hor_region_rx) = watch::channel(Rect { left: 0, top: 0, width: usize::max_value(), height: usize::max_value()});
         let (ver_region_tx, ver_region_rx) = watch::channel(Rect { left: 0, top: 0, width: usize::max_value(), height: usize::max_value()});

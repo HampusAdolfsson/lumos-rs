@@ -3,6 +3,7 @@ pub mod specification;
 mod transformations;
 pub mod frame_sampler;
 
+use desktop_capture::FrameCaptureEvent;
 use log::debug;
 
 use tokio::sync::watch;
@@ -21,7 +22,7 @@ use self::frame_sampler::FrameSampler;
 /// `T` is the physical device to draw to, see [RenderOutput].
 pub struct RenderDevice<'a> {
     output: Box<dyn RenderOutput + Send>,
-    stream: BoxStream<'a, RgbVec>
+    stream: BoxStream<'a, RgbVec>,
 }
 
 /// An output sink for color values (i.e. [RgbVec]s).
@@ -37,18 +38,26 @@ impl<'a> RenderDevice<'a> {
     /// Creates a new device from the given [specification::DeviceSpecification].
     ///
     /// When the device is run, it will process frames from the provided stream.
-    pub fn new<U, V, S, P>(spec: specification::DeviceSpecification, frames: U, audio: V, mut sampler: S, mut params: watch::Receiver<P>) -> Self where
-        U: Stream<Item = desktop_capture::Frame> + std::marker::Send + 'a,
-        V: Stream<Item = f32> + std::marker::Send + 'a,
-        S: FrameSampler<P> + std::marker::Sync + 'a,
+    pub fn new<Fr, Au, Sa, P>(spec: specification::DeviceSpecification, frame_events: Fr, audio: Au, mut sampler: Sa, mut params: watch::Receiver<P>) -> Self where
+        Fr: Stream<Item = desktop_capture::FrameCaptureEvent> + std::marker::Send + 'a,
+        Au: Stream<Item = f32> + std::marker::Send + 'a,
+        Sa: FrameSampler<P> + std::marker::Sync + 'a,
         P: Clone + Sync + Send + 'a,
     {
         // Create a stream of sampled colors
-        let mut stream = frames.boxed().map(move |frame| {
+        let output_size = spec.output.size();
+        let mut stream = frame_events.boxed().map(move |event| {
             if let Ok(changed) = params.has_changed() && changed {
                 sampler.set_params(params.borrow_and_update().clone());
             }
-            sampler.sample(&frame)
+            match event {
+                FrameCaptureEvent::Stopped => {
+                    vec![spec.fallback_color; output_size]
+                },
+                FrameCaptureEvent::Captured(frame) => {
+                    sampler.sample(&frame)
+                }
+            }
         }).boxed();
 
         // Transform the stream according to the specification

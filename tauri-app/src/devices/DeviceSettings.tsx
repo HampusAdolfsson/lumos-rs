@@ -3,7 +3,7 @@ import { WledSettings } from './WledSettings'
 import { DeviceTypes, IDeviceSpecification, SamplingTypes } from './DeviceSpecification';
 import { QmkSettings } from './QmkSettings';
 import { SerialSettings } from './SerialSettings';
-import { Input, Modal, Segmented, Slider, Divider, InputNumber } from 'antd';
+import { Input, Modal, Segmented, Slider, Divider, InputNumber, ColorPicker } from 'antd';
 import "./DeviceSettings.css";
 
 interface Props {
@@ -83,6 +83,19 @@ export function DeviceSettings(props: Props) {
             </td>
             <td>
               <Slider min={0} max={100} step={5} value={device.valueAdjustment} onChange={val => { setField("valueAdjustment", val); }} />
+            </td>
+          </tr>
+          <tr>
+            <td>
+              Fallback Color
+            </td>
+            <td>
+              <ColorPicker showText disabledAlpha onChange={color => {
+                  const { r, g, b } = color.toRgb();
+                  setField("fallbackColor", [r / 255, g / 255, b /255]);
+                }}
+                defaultValue={`rgb(${255 * device.fallbackColor[0]}, ${255 * device.fallbackColor[1]}, ${255 * device.fallbackColor[2]})`}
+                format="rgb"/>
             </td>
           </tr>
         </table>

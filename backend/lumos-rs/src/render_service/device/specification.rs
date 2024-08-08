@@ -1,3 +1,5 @@
+use color::RgbF32;
+
 use super::RenderOutput;
 
 /// A specification from which a [super::RenderDevice] can be created
@@ -8,6 +10,7 @@ pub struct DeviceSpecification {
     pub smoothing: Option<SmoothingParameters>,
     pub audio_sampling: Option<AudioSamplingParameters>,
     pub gamma: f32,
+    pub fallback_color: RgbF32,
 }
 
 pub struct AmbilightSamplingParameters {

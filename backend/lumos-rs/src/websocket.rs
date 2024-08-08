@@ -1,4 +1,5 @@
 
+use color::RgbF32;
 use futures::TryStreamExt;
 use log::{info, debug, warn};
 use tokio::net::{TcpListener, TcpStream};
@@ -48,6 +49,7 @@ mod deser_types {
         pub saturation_adjustment: u32,
         pub value_adjustment: u32,
         pub audio_amount: f32,
+        pub fallback_color: (f32, f32, f32),
         #[serde(rename = "type")]
         pub variant: u32,
         pub wled_data: Option<WledData>,
@@ -259,6 +261,7 @@ fn parse_device(device_raw: deser_types::DeviceSpec) -> SimpleResult<DeviceSpeci
         smoothing: None,
         audio_sampling: if device_raw.audio_amount > 0.0 { Some(AudioSamplingParameters{ amount: device_raw.audio_amount / 100.0 }) } else { None },
         gamma: device_raw.gamma,
+        fallback_color: RgbF32 { red: device_raw.fallback_color.0, green: device_raw.fallback_color.1, blue: device_raw.fallback_color.2 },
     })
 }
 

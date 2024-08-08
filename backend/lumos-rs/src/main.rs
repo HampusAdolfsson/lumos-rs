@@ -80,7 +80,7 @@ async fn main() {
             },
             profile_info = profile_listener.next() => {
                 match profile_info {
-                    Ok(profile_info) => render_service.notify_active_profile(profile_info).await,
+                    Ok(profile_info) => render_service.set_active_profile(profile_info.monitor_index, profile_info.profile).await,
                     Err(e) => warn!("Profile listener got error: {}", e),
                 }
             },

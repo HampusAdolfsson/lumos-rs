@@ -27,9 +27,9 @@ use device_collection::DeviceCollection;
 pub struct RenderService {
     running_devices: Option<DeviceCollection>,
     frame_capturer: desktop_capture::DesktopCaptureController,
-    frame_stream: watch::Receiver<desktop_capture::Frame>,
+    frame_stream: watch::Receiver<desktop_capture::FrameCaptureEvent>,
     audio_capturer: audio_capture::AudioCaptureController,
-    audio_stream: watch::Receiver<f32>,
+    audio_stream: watch::Receiver<audio_capture::AudioIntensity>,
 
     active_profiles: ProfilesState,
     default_capture_region_horizontal: Rect,
@@ -60,8 +60,9 @@ impl RenderService {
         self.audio_capturer.set_audio_devices(device_names);
     }
 
-    pub async fn notify_active_profile(&mut self, active_profile: profiles::ActiveProfileInfo) {
-        self.active_profiles.set_active_profile(active_profile.monitor_index, active_profile.profile);
+    /// Sets or clears the active profile for the given monitor
+    pub async fn set_active_profile(&mut self, monitor_index: u32, profile: Option<profiles::ActiveProfile>) {
+        self.active_profiles.set_active_profile(monitor_index, profile);
 
         if let Some(device_group) = self.running_devices.as_ref() {
             if let Some((monitor_index, profile)) = self.active_profiles.get_highest_priority_profile() {

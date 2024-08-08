@@ -86,6 +86,7 @@ const defaultDevice: IExtendedDeviceSpecification = {
     colorTemp: 5500,
     saturationAdjustment: 0,
     valueAdjustment: 0,
+    fallbackColor: [0, 0, 0],
     audioAmount: 0,
     type: null,
     wledData: null,

@@ -12,6 +12,7 @@ export interface IDeviceSpecification {
     saturationAdjustment: number;
     valueAdjustment: number;
     audioAmount: number;
+    fallbackColor: [number, number, number],
     type: number | null;
     wledData: IWledData | null;
     qmkData: IQmkData | null;

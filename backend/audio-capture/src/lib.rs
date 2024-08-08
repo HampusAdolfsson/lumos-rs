@@ -10,7 +10,7 @@ use crate::intensity_source::IntensitySourceEvent;
 
 mod intensity_source;
 
-type AudioIntensity = f32;
+pub type AudioIntensity = f32;
 
 /// Captures audio data and converts it to a stream of intensity/loudness values.
 ///
